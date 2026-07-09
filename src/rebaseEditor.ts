@@ -13,6 +13,8 @@ function isValidSha(sha: unknown): sha is string {
   return typeof sha === 'string' && /^[0-9a-f]{4,40}$/i.test(sha);
 }
 
+const ACTION_SET = new Set(['pick', 'reword', 'edit', 'squash', 'fixup', 'drop']);
+
 /** Levert bestandsinhoud op een revisie voor de native diff-editor. */
 export class GitContentProvider implements vscode.TextDocumentContentProvider {
   constructor(private readonly services: Map<string, GitService>) {}
@@ -89,6 +91,22 @@ export class RebaseEditorProvider implements vscode.CustomTextEditorProvider {
             break;
           case 'setEntries': {
             if (!Array.isArray(msg.entries)) break;
+            // Defense-in-depth: de webview mag herordenen en acties kiezen,
+            // maar geen nieuwe commando-regels of vreemde sha's introduceren.
+            const currentRaw = new Set(
+              parseTodo(document.getText()).entries
+                .flatMap((e) => (e.kind === 'raw' ? [e.text] : [])),
+            );
+            const valid = msg.entries.every((e) =>
+              e?.kind === 'action'
+                ? ACTION_SET.has(e.action) && isValidSha(e.sha)
+                  && typeof e.subject === 'string'
+                  && (e.flag === undefined || e.flag === '-C' || e.flag === '-c')
+                : e?.kind === 'raw' && currentRaw.has(e.text));
+            if (!valid) {
+              this.output.appendLine('[rebase-buddy] rejected setEntries with unknown or malformed entries');
+              break;
+            }
             const newText = serializeTodo(msg.entries, trailer);
             if (newText !== document.getText()) {
               applyingEdit = true;

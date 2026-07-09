@@ -94,3 +94,17 @@ describe('abortTodo', () => {
     }
   });
 });
+
+describe('serializeTodo — injection hardening', () => {
+  it('flattens newlines in subjects so no extra todo lines can be injected', () => {
+    const text = serializeTodo(
+      [{ kind: 'action', action: 'pick', sha: 'ab12cd3', subject: 'fix\nexec rm -rf /' }], '');
+    expect(text).toBe('pick ab12cd3 fix exec rm -rf /\n');
+    expect(text.split('\n').filter(Boolean)).toHaveLength(1);
+  });
+
+  it('flattens newlines in raw entries', () => {
+    const text = serializeTodo([{ kind: 'raw', text: 'exec npm test\nexec evil' }], '');
+    expect(text.split('\n').filter(Boolean)).toHaveLength(1);
+  });
+});

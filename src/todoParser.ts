@@ -75,10 +75,13 @@ function parseActionLine(line: string): ActionEntry | null {
 }
 
 export function serializeTodo(entries: TodoEntry[], trailer: string): string {
+  // Newlines in velden zouden extra todo-regels injecteren die git uitvoert;
+  // plat slaan naar spaties, wat er ook binnenkomt.
+  const flatten = (s: string) => s.replace(/[\r\n]+/g, ' ');
   const lines = entries.map((e) => {
-    if (e.kind === 'raw') return e.text;
+    if (e.kind === 'raw') return flatten(e.text);
     const flag = e.flag ? `${e.flag} ` : '';
-    return `${e.action} ${flag}${e.sha} ${e.subject}`.trimEnd();
+    return `${e.action} ${flag}${e.sha} ${flatten(e.subject)}`.trimEnd();
   });
 
   let out = lines.join('\n') + '\n';
