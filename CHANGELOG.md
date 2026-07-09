@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-09
+
+### Fixed
+
+- Listing README pointed to an internal spec path; design docs now live under
+  `docs/specs/`.
+- Listing screenshots and test fixtures used non-neutral placeholder
+  identities; replaced with `user1`/`user2`.
+- Remaining "Rebaser" strings after the rename to Rebase Buddy (webview top
+  bar, output channel, repository links).
+
 ## [0.1.0] - 2026-07-09
 
 ### Added
@@ -34,5 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Webview built without `innerHTML` (XSS-safe by construction) under a strict
   CSP with script nonce.
 
-[Unreleased]: https://github.com/frontmatters/rebase-buddy/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/frontmatters/rebase-buddy/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/frontmatters/rebase-buddy/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/frontmatters/rebase-buddy/releases/tag/v0.1.0
