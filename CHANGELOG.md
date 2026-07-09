@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Host hardening for message files: strict filename whitelist, symlink
+  defence before writes, and state recovery from disk after a reload.
 - Inline commit message editing: double-click the message in the details
   panel (or the subject in the list, or use the pencil icon) to rewrite a
   commit message during the rebase, without the COMMIT_EDITMSG editor stop.

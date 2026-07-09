@@ -2,7 +2,7 @@
   "name": "rebase-buddy",
   "displayName": "Rebase Buddy",
   "description": "Interactive rebase editor with commit details — free and minimal",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "frontmatters",
   "author": "Frontmatters <hello@frontmatters.dev>",
   "private": true,
