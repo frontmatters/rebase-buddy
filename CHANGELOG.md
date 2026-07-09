@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Multi-select in the commit list: Cmd/Ctrl-click toggles rows, Shift-click
+  and Shift-arrows select ranges. Setting an action (menu or P R E S F D)
+  applies to every selected commit, and dragging a selection moves it as one
+  contiguous block, preserving relative order.
+
+### Changed
+
+- The message editor auto-fits its height to the content and grows while
+  typing (capped at half the viewport).
+- Alignment polish: the commit message and its edit button are optically
+  centered, the close button aligns with the panel grid, list columns are
+  tighter, and the message editor hint no longer wraps awkwardly.
+
 ## [0.3.0] - 2026-07-09
 
 ### Added

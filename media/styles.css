@@ -178,8 +178,8 @@ body.is-resizing {
 
 .details__close {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 12px;
+  right: 16px;
   z-index: 2;
 }
 
@@ -265,9 +265,9 @@ body.is-resizing {
 
 .row {
   display: grid;
-  grid-template-columns: 22px 14px 84px 60px 18px minmax(0, 1fr) auto;
+  grid-template-columns: 22px 14px 84px 60px 16px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   height: 34px;
   padding: 0 12px 0 6px;
   border-bottom: 1px solid var(--r-border);
@@ -335,7 +335,10 @@ body.is-resizing {
 .row--dropped .row__sha,
 .row--dropped .row__meta { opacity: 0.5; }
 
-.row__sha { color: var(--vscode-descriptionForeground); }
+.row__sha {
+  color: var(--vscode-descriptionForeground);
+  padding-left: 4px;
+}
 
 .row__copy {
   display: inline-flex;
@@ -629,14 +632,18 @@ body.is-resizing {
 
 .details__subjectrow {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 6px;
+  margin: 0 0 6px;
+}
+
+.details__subjectrow .details__subject {
+  margin: 0;
 }
 
 .details__subjectrow .details__pencil {
   opacity: 0;
   flex: none;
-  margin-top: 1px;
 }
 
 .details__subjectrow:hover .details__pencil,
@@ -660,6 +667,8 @@ body.is-resizing {
 
 .msgedit__area {
   width: 100%;
+  min-height: 32px;
+  overflow: hidden;
   padding: 8px 10px;
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 12px;
@@ -673,17 +682,18 @@ body.is-resizing {
 
 .msgedit__area:focus { outline: none; }
 
-.msgedit__actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-}
-
 .msgedit__hint {
-  flex: 1;
+  margin-top: 4px;
   font-size: 11px;
   color: var(--vscode-descriptionForeground);
+}
+
+.msgedit__actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .file {
@@ -751,4 +761,16 @@ body.is-resizing {
   border: 1px solid var(--r-border);
   border-radius: 2px;
   background: transparent;
+}
+
+/* ---------- multiselect ---------- */
+
+.details__multiselect {
+  margin: 0 0 12px;
+  padding: 5px 8px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  border: 1px solid var(--r-border);
+  border-radius: 2px;
+  background: var(--vscode-textCodeBlock-background, transparent);
 }

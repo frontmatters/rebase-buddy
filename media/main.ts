@@ -30,7 +30,9 @@ const DETAILS_MAX = 640;
 
 let entries: TodoEntry[] = [];
 let repo: RepoInfo | undefined;
-let selected = -1;
+let selected = -1;          // anchor: bepaalt het detail-paneel
+let lead = -1;              // focus-einde voor shift-bereiken
+let selectedSet = new Set<number>();
 let dragFrom = -1;
 let abortArmed = false;
 let abortTimer: ReturnType<typeof setTimeout> | undefined;
@@ -49,6 +51,34 @@ function saveState(): void {
 function toggleDetails(open: boolean): void {
   detailsOpen = open;
   saveState();
+  render();
+}
+
+function viewOrder(): number[] {
+  const order = entries.map((_, i) => i);
+  if (newestFirst) order.reverse();
+  return order;
+}
+
+function toggleSelect(i: number): void {
+  if (selectedSet.has(i) && selectedSet.size > 1) {
+    selectedSet.delete(i);
+    if (selected === i) selected = Array.from(selectedSet)[0];
+  } else {
+    selectedSet.add(i);
+    selected = i;
+  }
+  lead = i;
+  render();
+}
+
+function rangeSelect(i: number): void {
+  const order = viewOrder();
+  const a = order.indexOf(selected < 0 ? i : selected);
+  const b = order.indexOf(i);
+  const [lo, hi] = a <= b ? [a, b] : [b, a];
+  selectedSet = new Set(order.slice(lo, hi + 1));
+  lead = i;
   render();
 }
 
@@ -423,18 +453,29 @@ function row(entry: TodoEntry, i: number): HTMLElement {
     );
   }
 
-  if (i === selected) node.classList.add('row--selected');
+  const inSelection = selectedSet.has(i) || i === selected;
+  if (inSelection) node.classList.add('row--selected');
   node.setAttribute('role', 'option');
-  node.setAttribute('aria-selected', String(i === selected));
+  node.setAttribute('aria-selected', String(inSelection));
   node.dataset.i = String(i);
   node.draggable = true;
-  node.addEventListener('click', () => {
+  node.addEventListener('click', (e) => {
+    if (e.metaKey || e.ctrlKey) {
+      toggleSelect(i);
+      return;
+    }
+    if (e.shiftKey) {
+      rangeSelect(i);
+      return;
+    }
     // Een klik op een commit is een expliciete details-intentie: heropen het
     // paneel als het dicht was (pijltjes-navigatie doet dat bewust niet).
     if (!detailsOpen) {
       detailsOpen = true;
       saveState();
     }
+    selectedSet = new Set([i]);
+    lead = i;
     select(i);
   });
   node.addEventListener('dragstart', (e) => {
@@ -453,7 +494,12 @@ function row(entry: TodoEntry, i: number): HTMLElement {
   });
   node.addEventListener('drop', (e) => {
     e.preventDefault();
-    if (dragFrom >= 0 && dragFrom !== i) move(dragFrom, i);
+    if (dragFrom < 0 || dragFrom === i || selectedSet.has(i)) return;
+    if (selectedSet.size > 1 && selectedSet.has(dragFrom)) {
+      moveBlock(Array.from(selectedSet), i);
+    } else {
+      move(dragFrom, i);
+    }
   });
   return node;
 }
@@ -529,6 +575,11 @@ function detailsChildren(): Node[] {
 
   const nodes: Node[] = [header];
 
+  if (selectedSet.size > 1) {
+    nodes.push(el('div', 'details__multiselect',
+      `${selectedSet.size} commits selected · actions and drag apply to all`));
+  }
+
   if (editingIndex === selected && canEditMessage(entry)) {
     nodes.push(messageEditor(entry, meta));
   } else {
@@ -582,8 +633,15 @@ function messageEditor(entry: ActionEntry, meta: CommitDetails): HTMLElement {
 
   const area = el('textarea', 'msgedit__area') as HTMLTextAreaElement;
   area.value = initial;
-  area.rows = Math.min(12, Math.max(4, initial.split('\n').length + 1));
+  area.rows = 1;
   area.spellcheck = false;
+  // Auto-fit: krimp naar de inhoud en groei mee tijdens het typen.
+  const autosize = () => {
+    area.style.height = 'auto';
+    area.style.height = `${Math.min(area.scrollHeight + 2, window.innerHeight * 0.5)}px`;
+  };
+  area.addEventListener('input', autosize);
+  requestAnimationFrame(autosize);
 
   const confirm = () => {
     const text = area.value.trim();
@@ -615,9 +673,8 @@ function messageEditor(entry: ActionEntry, meta: CommitDetails): HTMLElement {
 
   return el('div', 'msgedit',
     area,
-    el('div', 'msgedit__actions',
-      el('span', 'msgedit__hint', 'first line is the subject'),
-      cancelBtn, saveBtn),
+    el('div', 'msgedit__hint', 'first line is the subject'),
+    el('div', 'msgedit__actions', cancelBtn, saveBtn),
   );
 }
 
@@ -646,9 +703,10 @@ function fileRow(sha: string, f: FileChange): HTMLElement {
 
 function statusbar(): HTMLElement {
   const keys = el('span', 'statusbar__keys');
-  keys.title = 'Keyboard shortcuts — ↑↓: select commit · ⌥↑↓: move commit · '
-    + 'P: pick · R: reword · E: edit · S: squash · F: fixup · D: drop (sets the action of the selected commit)';
-  const parts: Array<[string, string]> = [['↑↓', 'select'], ['⌥↑↓', 'move'], ['P R E S F D', 'set action']];
+  keys.title = 'Keyboard shortcuts — ↑↓: select · ⇧↑↓ / ⇧-click: range · ⌘-click: toggle · '
+    + '⌥↑↓: move selection · P: pick · R: reword · E: edit · S: squash · F: fixup · D: drop '
+    + '(applies to every selected commit)';
+  const parts: Array<[string, string]> = [['↑↓', 'select'], ['⇧/⌘', 'multi'], ['⌥↑↓', 'move'], ['P R E S F D', 'set action']];
   parts.forEach(([key, label], i) => {
     if (i > 0) keys.append(' · ');
     keys.append(el('kbd', undefined, key), ` ${label}`);
@@ -675,20 +733,41 @@ function select(i: number): void {
 }
 
 function setAction(i: number, action: TodoAction): void {
-  const entry = entries[i];
-  if (entry?.kind !== 'action') return;
-  if ((action === 'squash' || action === 'fixup') && !hasMeldTarget(i)) return;
-  entry.action = action;
-  if (action !== 'fixup') delete entry.flag;
+  // Hoort de rij bij de actieve selectie, dan geldt de actie voor allemaal.
+  const targets = selectedSet.size > 1 && selectedSet.has(i) ? Array.from(selectedSet) : [i];
+  let changed = false;
+  for (const idx of targets) {
+    const entry = entries[idx];
+    if (entry?.kind !== 'action') continue;
+    // Enkele rij: harde guard zoals voorheen. Bij een multi-apply laten we de
+    // zichtbare invalid-state + geblokkeerde Start het uitleggen.
+    if (targets.length === 1 && (action === 'squash' || action === 'fixup') && !hasMeldTarget(idx)) return;
+    entry.action = action;
+    if (action !== 'fixup') delete entry.flag;
+    changed = true;
+  }
+  if (!changed) return;
   selected = i;
   sync();
 }
 
-function move(from: number, to: number): void {
-  const [moved] = entries.splice(from, 1);
-  entries.splice(to, 0, moved);
-  selected = to;
+/** Verplaatst de gegeven canonieke indices als één aaneengesloten blok naar
+ * insertAt (pre-verwijdering coördinaten); onderlinge volgorde blijft. */
+function moveBlock(indices: number[], insertAt: number): void {
+  const sorted = Array.from(new Set(indices)).sort((a, b) => a - b);
+  const moving = sorted.map((i) => entries[i]);
+  for (let k = sorted.length - 1; k >= 0; k--) entries.splice(sorted[k], 1);
+  const removedBefore = sorted.filter((i) => i < insertAt).length;
+  const at = Math.max(0, Math.min(entries.length, insertAt - removedBefore));
+  entries.splice(at, 0, ...moving);
+  selectedSet = new Set(moving.map((_, k) => at + k));
+  selected = at;
+  lead = at + moving.length - 1;
   sync();
+}
+
+function move(from: number, to: number): void {
+  moveBlock([from], to);
 }
 
 function sync(): void {
@@ -706,10 +785,20 @@ document.addEventListener('keydown', (e) => {
     const delta = (e.key === 'ArrowUp' ? -1 : 1) * (newestFirst ? -1 : 1);
     e.preventDefault();
     if (e.altKey && selected >= 0) {
-      const to = selected + delta;
-      if (to >= 0 && to < entries.length) move(selected, to);
+      const block = selectedSet.size > 1 ? Array.from(selectedSet).sort((a, b) => a - b) : [selected];
+      const lo = block[0];
+      const hi = block[block.length - 1];
+      if (delta < 0 ? lo > 0 : hi < entries.length - 1) {
+        moveBlock(block, delta < 0 ? lo - 1 : hi + 2);
+      }
+    } else if (e.shiftKey && lead >= 0) {
+      const next = Math.min(Math.max(lead + delta, 0), entries.length - 1);
+      rangeSelect(next);
     } else {
-      select(Math.min(Math.max(selected + delta, 0), entries.length - 1));
+      const next = Math.min(Math.max((lead >= 0 ? lead : selected) + delta, 0), entries.length - 1);
+      selectedSet = new Set([next]);
+      lead = next;
+      select(next);
     }
   } else if (action && selected >= 0 && !e.metaKey && !e.ctrlKey && !e.altKey) {
     setAction(selected, action);
@@ -733,12 +822,18 @@ window.addEventListener('message', (event: MessageEvent<ToWebview>) => {
         document.documentElement.style.setProperty('--details-w', `${detailsW}px`);
       }
       if (selected < 0 && entries.length > 0) selected = 0;
+      selectedSet = new Set(selected >= 0 ? [selected] : []);
+      lead = selected;
       render();
       break;
     }
     case 'entries':
       entries = msg.entries;
       if (selected >= entries.length) selected = entries.length - 1;
+      selectedSet = new Set(selectedSet.size > 1
+        ? Array.from(selectedSet).filter((i) => i < entries.length)
+        : (selected >= 0 ? [selected] : []));
+      lead = selected;
       editingIndex = null;
       render();
       break;
