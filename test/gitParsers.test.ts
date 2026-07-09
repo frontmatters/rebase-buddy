@@ -7,7 +7,7 @@ const RS = '\x1e';
 describe('parseCommitRecords', () => {
   it('parses a batch of NUL-separated records', () => {
     const record = [
-      'a'.repeat(40), 'ab12cd3', 'user1', 'm@example.com',
+      'a'.repeat(40), 'ab12cd3', 'user1', 'user1@example.com',
       '2026-07-09T10:00:00+02:00', 'f00 b44', 'feat: add login', 'Longer body\n\nSecond paragraph',
     ].join(NUL);
     const out = parseCommitRecords(record + RS + '\n');
