@@ -48,3 +48,13 @@ See `docs/specs/2026-07-09-rebase-buddy-design.md`.
 ---
 
 © 2026 [Frontmatters](https://frontmatters.dev) · MIT
+
+## Contributing
+
+Everything in this repository is public: English only, no internal tooling
+references, no private data. `scripts/check-sanitized.sh` enforces this and
+runs as a pre-push hook — enable it once per clone with:
+
+```sh
+git config core.hooksPath .githooks
+```

@@ -1,117 +1,118 @@
-# Rebase Buddy — Design Spec (Fase 1)
+# Rebase Buddy — Design Spec (Phase 1)
 
-> Historisch document; geschreven onder de werktitel "Rebaser", bij publicatie hernoemd naar **Rebase Buddy** (`frontmatters.rebase-buddy`).
+> Historical document; written under the working title "Rebaser", renamed to
+> **Rebase Buddy** (`frontmatters.rebase-buddy`) at publication.
 
-**Datum:** 2026-07-09
-**Status:** Goedgekeurd design, fase 1
-**Doel:** Gratis, minimalistisch alternatief voor GitLens Pro's interactive rebase editor + commit details, als VS Code-extensie.
+**Date:** 2026-07-09
+**Status:** Approved design, phase 1
+**Goal:** Free, minimal alternative to GitLens Pro's interactive rebase editor + commit details, as a VS Code extension.
 
-## Waarom
+## Why
 
-GitLens zet de interactive rebase editor en commit graph (deels) achter een Pro-paywall. Rebaser levert de kernfunctionaliteit — interactief rebasen met een GUI en commit details bekijken — in eigen beheer, zonder bloat.
+GitLens puts the interactive rebase editor and commit graph (partially) behind a Pro paywall. Rebase Buddy delivers the core functionality — interactive rebasing with a GUI and inspecting commit details — self-owned, without bloat.
 
-## Fasering
+## Phasing
 
-- **Fase 1 (deze spec):** interactive rebase GUI + commit details (diff per commit) binnen de rebase-flow.
-- **Fase 2 (later):** commit graph / visuele history als aparte view.
-- **Fase 3 (later):** blame / file history.
+- **Phase 1 (this spec):** interactive rebase GUI + commit details (diff per commit) within the rebase flow.
+- **Phase 2 (later):** commit graph / visual history as a separate view.
+- **Phase 3 (later):** blame / file history.
 
-Elke fase is apart bruikbaar en shipbaar.
+Each phase is independently usable and shippable.
 
-## Architectuur
+## Architecture
 
-Eén TypeScript VS Code-extensie, twee lagen:
+One TypeScript VS Code extension, two layers:
 
 ```
 ┌─ Extension host (Node) ──────────────────────────┐
 │  RebaseEditorProvider   GitService                │
-│  (CustomTextEditor voor  (spawnt `git` child      │
-│   git-rebase-todo)        processes, parst output)│
+│  (CustomTextEditor for   (spawns `git` child      │
+│   git-rebase-todo)        processes, parses)      │
 └───────────────┬──────────────────────────────────┘
                 │ postMessage (typed protocol)
 ┌───────────────▼──────────────────────────────────┐
-│  Webview UI (vanilla TS + CSS, geen framework)   │
+│  Webview UI (vanilla TS + CSS, no framework)     │
 │  ┌────────────────────┬───────────────────────┐  │
-│  │ Commit-lijst       │ Detail-paneel         │  │
+│  │ Commit list        │ Detail panel          │  │
 │  │ (drag & drop,      │ (message, author,     │  │
-│  │  actie-dropdown)   │  datum, file-lijst)   │  │
+│  │  action dropdown)  │  date, file list)     │  │
 │  └────────────────────┴───────────────────────┘  │
 └──────────────────────────────────────────────────┘
 ```
 
-### Kernprincipes
+### Core principles
 
-1. **Git blijft de uitvoerder.** De extensie registreert een `CustomTextEditor` op `**/rebase-merge/git-rebase-todo`. De GUI is een slimme editor voor dat tekstbestand — geen eigen rebase-engine, geen libgit2.
-2. **Het todo-bestand is de single source of truth.** Elke UI-wijziging wordt direct als tekst teruggeschreven naar het TextDocument via `WorkspaceEdit`. Undo/redo werkt daardoor gratis mee.
-3. **Geen dependencies** behalve de VS Code API. Repo-data komt uit `git` child processes met NUL-gescheiden formaten (`git log --format=%H%x00%an%x00...`, `git show --stat`).
-4. **Native theming.** Uitsluitend `--vscode-*` CSS-variabelen (dark/light automatisch), codicons voor iconen. Flat, dunne borders, geen emojis.
+1. **Git stays the executor.** The extension registers a `CustomTextEditor` on `**/rebase-merge/git-rebase-todo`. The GUI is a smart editor for that text file — no custom rebase engine, no libgit2.
+2. **The todo file is the single source of truth.** Every UI change is written straight back to the TextDocument as text via `WorkspaceEdit`. Undo/redo comes for free.
+3. **No dependencies** beyond the VS Code API. Repo data comes from `git` child processes with NUL-separated formats (`git log --format=%H%x00%an%x00...`, `git show --stat`).
+4. **Native theming.** Exclusively `--vscode-*` CSS variables (dark/light automatic), inline SVG icons. Flat, thin borders, no emojis.
 
-## Componenten
+## Components
 
 ### Extension host
 
-- **`RebaseEditorProvider`** — implementeert `vscode.CustomTextEditorProvider`, geregistreerd op filename-pattern `**/rebase-merge/git-rebase-todo` (alleen interactieve rebases gebruiken dit pad). Parst todo-regels naar een model, stuurt state naar de webview, vertaalt webview-mutaties terug naar tekst-edits.
-- **`GitService`** — voert `git`-commando's uit als child process. De repo-root wordt robuust geresolved vanaf het todo-bestandspad: `git --git-dir=<dir-boven-rebase-merge> rev-parse --show-toplevel`, met fallback op het `gitdir`-bestand (linked worktrees) en als laatste redmiddel twee niveaus omhoog. Levert per SHA: volledige message, author, datum, gewijzigde bestanden met +/- stats. Opgehaalde metadata wordt per SHA gecachet voor de duur van de sessie.
-- **`TodoParser`** — puur, testbaar: todo-tekst ↔ model (regels: `pick|reword|edit|squash|fixup|drop <sha> <subject>`, comments, lege regels; `break`/`exec`/`label` e.d. worden ongewijzigd doorgelaten en read-only getoond).
+- **`RebaseEditorProvider`** — implements `vscode.CustomTextEditorProvider`, registered on filename pattern `**/rebase-merge/git-rebase-todo` (only interactive rebases use this path). Parses todo lines into a model, sends state to the webview, translates webview mutations back into text edits.
+- **`GitService`** — runs `git` commands as child processes. The repo root is resolved robustly from the todo file path: `git --git-dir=<dir-above-rebase-merge> rev-parse --show-toplevel`, falling back to the `gitdir` file (linked worktrees) and finally two levels up. Delivers per SHA: full message, author, date, changed files with +/- stats. Fetched metadata is cached per SHA for the session.
+- **`TodoParser`** — pure, testable: todo text ↔ model (lines: `pick|reword|edit|squash|fixup|drop <sha> <subject>`, comments, blank lines; `break`/`exec`/`label` etc. are passed through unchanged and shown read-only).
 - **Commands:**
-  - `rebaser.enable` — bewaart de huidige `sequence.editor`-waarde (in `globalState`) en zet dan `git config --global sequence.editor "code --wait"`.
-  - `rebaser.disable` — herstelt de bewaarde vorige waarde, of unset de config als er geen vorige waarde was.
+  - `rebaser.enable` — stores the current `sequence.editor` value (in `globalState`), then sets `git config --global sequence.editor "code --wait"`.
+  - `rebaser.disable` — restores the stored previous value, or unsets the config when there was none.
 
 ### Webview UI
 
-- **Commit-lijst** — één rij per todo-entry: actie-dropdown (pick/reword/edit/squash/fixup/drop), SHA (kort), subject, author, relatieve datum. Herordenen via drag & drop én Alt+↑/↓. Selectie via klik of pijltjestoetsen.
-- **Detail-paneel** — bij selectie: volledige commit message, author, datum, file-lijst met +/- stats. Klik op een bestand → opent VS Code's native diff-editor via `vscode.diff` met twee `git show`-URI's (eigen `TextDocumentContentProvider` met scheme `rebaser-git`). Geen eigen diff-renderer.
-- **Actiebalk** — knoppen **Start Rebase** en **Abort**, plus een waarschuwingsregel dat de tab sluiten zonder actie gelijkstaat aan Start.
+- **Commit list** — one row per todo entry: action dropdown (pick/reword/edit/squash/fixup/drop), short SHA, subject, author, relative date. Reorder via drag & drop and Alt+↑/↓. Selection via click or arrow keys.
+- **Detail panel** — on selection: full commit message, author, date, file list with +/- stats. Clicking a file opens VS Code's native diff editor via `vscode.diff` with two `git show` URIs (custom `TextDocumentContentProvider` with scheme `rebaser-git`). No custom diff renderer.
+- **Action bar** — **Start Rebase** and **Abort** buttons, plus a warning line that closing the tab without action equals Start.
 
-### Message-protocol (extension ↔ webview)
+### Message protocol (extension ↔ webview)
 
-Typed messages, gedeelde TypeScript-types in `src/shared/`:
+Typed messages, shared TypeScript types in `src/shared/`:
 
-- extension → webview: `init { entries, repoInfo }`, `commitDetails { sha, details }`, `externalEdit { entries }` (bij wijziging van het document buiten de webview om; gedebounced ~150 ms zodat een externe editor-sessie geen stale tussenstanden rendert).
+- extension → webview: `init { entries, repoInfo }`, `commitDetails { sha, details }`, `externalEdit { entries }` (on document changes outside the webview; debounced ~150 ms so an external editor session never renders stale intermediate states).
 - webview → extension: `ready`, `moveEntry { from, to }`, `setAction { index, action }`, `selectCommit { sha }`, `openDiff { sha, path }`, `start`, `abort`.
 
-## Dataflow (happy path)
+## Data flow (happy path)
 
-1. Eenmalig: gebruiker draait command **"Rebaser: Enable"**.
-2. `git rebase -i <ref>` (terminal, Claude Code, waar dan ook) → git schrijft `.git/rebase-merge/git-rebase-todo` → VS Code opent het via `code --wait` → custom editor claimt de tab.
-3. Provider parst de todo-regels en haalt per commit metadata op via `GitService`; webview rendert de lijst (metadata mag async nadruppelen).
-4. Gebruiker herordent, kiest acties, bekijkt details/diffs.
-5. **Start Rebase** → document opslaan + tab sluiten → `code --wait` keert terug → git voert de rebase uit.
-6. **Abort** → alle regels worden comments (`# pick ...`) → opslaan + sluiten → git ziet een lege todo en breekt af met "Nothing to do".
+1. One-time: user runs the **enable** command.
+2. `git rebase -i <ref>` from any terminal → git writes `.git/rebase-merge/git-rebase-todo` → VS Code opens it via `code --wait` → the custom editor claims the tab.
+3. The provider parses the todo lines and fetches metadata per commit via `GitService`; the webview renders the list (metadata may trickle in asynchronously).
+4. The user reorders, picks actions, inspects details/diffs.
+5. **Start Rebase** → save document + close tab → `code --wait` returns → git executes the rebase.
+6. **Abort** → all lines become comments (`# pick ...`) → save + close → git sees an empty todo and aborts with "Nothing to do".
 
 ## Error handling
 
-| Situatie | Gedrag |
+| Situation | Behavior |
 |---|---|
-| Conflict tijdens rebase | Git stopt zelf; VS Code's ingebouwde merge-conflict-UI neemt over. Onze editor is dan al gesloten — bewust geen eigen conflict-flow. |
-| Reword/squash-message | Git opent `COMMIT_EDITMSG` in de normale editor — native flow, fase 1 laat dat zo. |
-| Tab gesloten zonder Start/Abort | Gedraagt zich als Start met de huidige staat (standaard `--wait`-gedrag). De UI waarschuwt hiervoor permanent in de actiebalk. |
-| Commit-metadata niet ophaalbaar (bijv. `--root`, shallow clone, onparsebare output) | Rij toont alleen SHA + todo-regel; editor blijft volledig functioneel. |
-| `git`-commando faalt | Foutmelding in detail-paneel, nooit een crash van de editor; stderr naar een output channel voor debugging. |
-| Onbekende todo-regeltypes (`exec`, `break`, `label`, `merge`, …) | Ongewijzigd doorgelaten, read-only getoond op hun positie. |
+| Conflict during rebase | Git stops on its own; VS Code's built-in merge conflict UI takes over. Our editor is already closed — deliberately no custom conflict flow. |
+| Reword/squash message | Git opens `COMMIT_EDITMSG` in the normal editor — native flow, phase 1 leaves it alone. |
+| Tab closed without Start/Abort | Behaves as Start with the current state (standard `--wait` behavior). The UI warns about this permanently in the action bar. |
+| Commit metadata unavailable (e.g. `--root`, shallow clone, unparseable output) | Row shows only SHA + todo line; the editor stays fully functional. |
+| `git` command fails | Error message in the detail panel, never an editor crash; stderr goes to an output channel for debugging. |
+| Unknown todo line types (`exec`, `break`, `label`, `merge`, …) | Passed through unchanged, shown read-only in place. |
 
-## Testen & verificatie
+## Testing & verification
 
-- **Unit tests (vitest)** voor `TodoParser` (tekst ↔ model, round-trip) en de `GitService`-outputparsers. Daar zitten de verwachte bugs.
-- **`scripts/fixture-repo.sh`** — genereert een wegwerp-repo met 8 commits en een branch voor handmatige en integratietests.
-- **Visuele verificatie (verplicht):** extensie draaien in de Extension Development Host, echte rebase op de fixture-repo, screenshots van de webview in light én dark mode vóór iets "klaar" heet.
+- **Unit tests (vitest)** for `TodoParser` (text ↔ model, round-trip) and the `GitService` output parsers. That is where the expected bugs live.
+- **`scripts/fixture-repo.sh`** — generates a throwaway repo with 8 commits and a branch for manual and integration testing.
+- **Visual verification (mandatory):** run the extension in the Extension Development Host, do a real rebase on the fixture repo, screenshot the webview in light and dark mode before calling anything "done".
 
-## Buiten scope (fase 1)
+## Out of scope (phase 1)
 
-Commit graph, blame, autosquash-detectie (`fixup!`), in-webview diff-preview, multi-repo, Marketplace-publicatie (lokale `.vsix` volstaat), eigen conflict-afhandeling, message-editing in de GUI.
+Commit graph, blame, autosquash detection (`fixup!`), in-webview diff preview, multi-repo, marketplace publication (local `.vsix` suffices), custom conflict handling, message editing in the GUI.
 
-## Projectstructuur
+## Project structure
 
 ```
 rebase-buddy/
-├── package.json          # extensie-manifest + esbuild scripts
+├── package.json          # extension manifest + esbuild scripts
 ├── src/
-│   ├── extension.ts      # activatie, registraties
+│   ├── extension.ts      # activation, registrations
 │   ├── rebaseEditor.ts   # RebaseEditorProvider
 │   ├── gitService.ts     # git child processes + parsers
-│   ├── todoParser.ts     # todo-tekst ↔ model (puur)
+│   ├── todoParser.ts     # todo text ↔ model (pure)
 │   └── shared/messages.ts# typed protocol
-├── media/                # webview: main.ts, styles.css (gebundeld)
+├── media/                # webview: main.ts, styles.css (bundled)
 ├── scripts/fixture-repo.sh
 └── test/                 # vitest unit tests
 ```
