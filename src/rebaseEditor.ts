@@ -1,8 +1,10 @@
+import { existsSync } from 'node:fs';
+import { rm, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { GitService } from './gitService';
-import { abortTodo, parseTodo, serializeTodo } from './todoParser';
-import type { FileChange, FromWebview, ToWebview } from './shared/messages';
+import { abortTodo, foldOwnExecLines, parseTodo, serializeTodo } from './todoParser';
+import type { FileChange, FromWebview, ToWebview, TodoEntry } from './shared/messages';
 
 export const DIFF_SCHEME = 'rebaser-git';
 
@@ -57,9 +59,67 @@ export class RebaseEditorProvider implements vscode.CustomTextEditorProvider {
     let commitUrlBase: string | undefined;
     const post = (msg: ToWebview) => panel.webview.postMessage(msg);
 
+    // Message-edits: de host is autoritair. Key = `${sha}#${occurrence}`
+    // zodat dezelfde sha vaker in de todo kan staan (dubbele pick).
+    const edits = new Map<string, { filename: string; text: string }>();
+
+    const occurrenceOf = (list: TodoEntry[], index: number): number => {
+      const target = list[index];
+      if (target?.kind !== 'action') return 0;
+      let occ = 0;
+      for (let i = 0; i < index; i++) {
+        const e = list[i];
+        if (e.kind === 'action' && e.sha === target.sha) occ++;
+      }
+      return occ;
+    };
+
+    const isKnownFile = (filename: string): boolean =>
+      Array.from(edits.values()).some((e) => e.filename === filename)
+      || existsSync(service.messageFilePath(filename));
+
+    /** Parse + vouw eigen exec-regels terug + hydrateer editedMessage-tekst. */
+    const parseFolded = (): TodoEntry[] => {
+      const folded = foldOwnExecLines(parseTodo(document.getText()).entries, isKnownFile);
+      const seen = new Map<string, number>();
+      for (const e of folded) {
+        if (e.kind !== 'action') continue;
+        const occ = seen.get(e.sha) ?? 0;
+        seen.set(e.sha, occ + 1);
+        if (e.editedMessage !== undefined) {
+          e.editedMessage = edits.get(`${e.sha}#${occ}`)?.text ?? '';
+        }
+      }
+      return folded;
+    };
+
+    /** Serialisatie-callback: exec-regel alléén voor entries waarvoor de
+     * host een message-bestand beheert — nooit op gezag van de webview. */
+    const makeExecFor = (list: TodoEntry[]) => {
+      const seen = new Map<string, number>();
+      const byIndex = list.map((e) => {
+        if (e.kind !== 'action') return undefined;
+        const occ = seen.get(e.sha) ?? 0;
+        seen.set(e.sha, occ + 1);
+        return e.editedMessage !== undefined ? edits.get(`${e.sha}#${occ}`)?.filename : undefined;
+      });
+      return (_: TodoEntry, i: number) => byIndex[i];
+    };
+
+    const rewrite = async (list: TodoEntry[]) => {
+      const newText = serializeTodo(list, trailer, makeExecFor(list));
+      if (newText === document.getText()) return;
+      applyingEdit = true;
+      try {
+        await this.replaceAll(document, newText);
+      } finally {
+        applyingEdit = false;
+      }
+    };
+
     const sendEntries = async (initial: boolean) => {
       const gen = ++generation;
-      const parsed = parseTodo(document.getText());
+      const parsed = { entries: parseFolded(), trailer: parseTodo(document.getText()).trailer };
       trailer = parsed.trailer;
       if (initial) {
         const repo = await service.repoInfo();
@@ -93,29 +153,59 @@ export class RebaseEditorProvider implements vscode.CustomTextEditorProvider {
             if (!Array.isArray(msg.entries)) break;
             // Defense-in-depth: de webview mag herordenen en acties kiezen,
             // maar geen nieuwe commando-regels of vreemde sha's introduceren.
+            // (Eigen exec-regels zijn op dit punt al teruggevouwen in hun
+            // entry; de webview ziet ze nooit als raw regels.)
             const currentRaw = new Set(
-              parseTodo(document.getText()).entries
-                .flatMap((e) => (e.kind === 'raw' ? [e.text] : [])),
+              parseFolded().flatMap((e) => (e.kind === 'raw' ? [e.text] : [])),
             );
             const valid = msg.entries.every((e) =>
               e?.kind === 'action'
                 ? ACTION_SET.has(e.action) && isValidSha(e.sha)
                   && typeof e.subject === 'string'
                   && (e.flag === undefined || e.flag === '-C' || e.flag === '-c')
+                  && (e.editedMessage === undefined || typeof e.editedMessage === 'string')
                 : e?.kind === 'raw' && currentRaw.has(e.text));
             if (!valid) {
               this.output.appendLine('[rebase-buddy] rejected setEntries with unknown or malformed entries');
               break;
             }
-            const newText = serializeTodo(msg.entries, trailer);
-            if (newText !== document.getText()) {
-              applyingEdit = true;
-              try {
-                await this.replaceAll(document, newText);
-              } finally {
-                applyingEdit = false;
-              }
+            await rewrite(msg.entries);
+            break;
+          }
+          case 'editMessage': {
+            if (typeof msg.index !== 'number' || typeof msg.message !== 'string') break;
+            const text = msg.message.replace(/\r\n/g, '\n').trim();
+            if (text === '' || Buffer.byteLength(text, 'utf8') > 64 * 1024) break;
+            const list = parseFolded();
+            const entry = list[msg.index];
+            if (entry?.kind !== 'action' || !isValidSha(entry.sha)) break;
+            if (entry.action === 'fixup' || entry.action === 'drop') break;
+            const occ = occurrenceOf(list, msg.index);
+            const filename = `rb-msg-${entry.sha.toLowerCase()}-${occ}`;
+            await writeFile(service.messageFilePath(filename), `${text}\n`, { mode: 0o600 });
+            edits.set(`${entry.sha}#${occ}`, { filename, text });
+            entry.editedMessage = text;
+            // Reword zou COMMIT_EDITMSG later alsnog openen: de inline edit
+            // vervangt die stop, dus de actie wordt pick.
+            if (entry.action === 'reword') entry.action = 'pick';
+            await rewrite(list);
+            post({ type: 'entries', entries: list });
+            break;
+          }
+          case 'revertMessage': {
+            if (typeof msg.index !== 'number') break;
+            const list = parseFolded();
+            const entry = list[msg.index];
+            if (entry?.kind !== 'action' || entry.editedMessage === undefined) break;
+            const occ = occurrenceOf(list, msg.index);
+            const edit = edits.get(`${entry.sha}#${occ}`);
+            if (edit) {
+              await rm(service.messageFilePath(edit.filename), { force: true });
+              edits.delete(`${entry.sha}#${occ}`);
             }
+            delete entry.editedMessage;
+            await rewrite(list);
+            post({ type: 'entries', entries: list });
             break;
           }
           case 'requestDetails':

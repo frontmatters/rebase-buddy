@@ -74,14 +74,62 @@ function parseActionLine(line: string): ActionEntry | null {
   return entry;
 }
 
-export function serializeTodo(entries: TodoEntry[], trailer: string): string {
+/** Bestandsnamen voor message-edits: strikt hex-sha + occurrence-teller,
+ * zodat het pad in de exec-regel by construction shell-veilig is. */
+const MSG_FILENAME_RE = /^rb-msg-[0-9a-f]{4,40}-\d+$/;
+
+/** Todo-regel voor een message-edit. `--git-path` resolvet ook in linked
+ * worktrees (waar `.git` een bestand is); git draait deze regels via
+ * `sh -c` met cwd = worktree-root, dus de substitutie gebeurt op het
+ * juiste moment op de juiste plek. */
+export function buildExecLine(filename: string): string {
+  if (!MSG_FILENAME_RE.test(filename)) {
+    throw new Error(`unsafe message filename: ${filename}`);
+  }
+  return `exec git commit --amend -F "$(git rev-parse --git-path 'rebase-merge/${filename}')"`;
+}
+
+const OWN_EXEC_RE = /^exec git commit --amend -F "\$\(git rev-parse --git-path 'rebase-merge\/(rb-msg-[0-9a-f]{4,40}-\d+)'\)"$/;
+
+/** Vouwt door ons geïnjecteerde amend-regels terug in de voorafgaande
+ * action-entry (als editedMessage-vlag). `isKnown` beslist of de host het
+ * message-bestand daadwerkelijk beheert — onbekende regels blijven raw,
+ * zodat handgemaakte lookalikes nooit als de onze behandeld worden. */
+export function foldOwnExecLines(
+  entries: TodoEntry[],
+  isKnown: (filename: string) => boolean,
+): TodoEntry[] {
+  const out: TodoEntry[] = [];
+  for (const entry of entries) {
+    const match = entry.kind === 'raw' ? OWN_EXEC_RE.exec(entry.text) : null;
+    const prev = out[out.length - 1];
+    if (match && isKnown(match[1]) && prev?.kind === 'action' && prev.editedMessage === undefined) {
+      prev.editedMessage = '';
+      continue;
+    }
+    out.push(entry);
+  }
+  return out;
+}
+
+export function serializeTodo(
+  entries: TodoEntry[],
+  trailer: string,
+  execFor?: (entry: TodoEntry, index: number) => string | undefined,
+): string {
   // Newlines in velden zouden extra todo-regels injecteren die git uitvoert;
   // plat slaan naar spaties, wat er ook binnenkomt.
   const flatten = (s: string) => s.replace(/[\r\n]+/g, ' ').replace(/[\x00-\x08\x0b-\x1f\x7f]/g, '');
-  const lines = entries.map((e) => {
-    if (e.kind === 'raw') return flatten(e.text);
-    const flag = e.flag ? `${e.flag} ` : '';
-    return `${e.action} ${flag}${e.sha} ${flatten(e.subject)}`.trimEnd();
+  const lines: string[] = [];
+  entries.forEach((e, i) => {
+    if (e.kind === 'raw') {
+      lines.push(flatten(e.text));
+    } else {
+      const flag = e.flag ? `${e.flag} ` : '';
+      lines.push(`${e.action} ${flag}${e.sha} ${flatten(e.subject)}`.trimEnd());
+    }
+    const filename = execFor?.(e, i);
+    if (filename) lines.push(buildExecLine(filename));
   });
 
   let out = lines.join('\n') + '\n';

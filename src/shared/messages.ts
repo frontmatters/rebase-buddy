@@ -13,6 +13,9 @@ export interface ActionEntry {
   subject: string;
   /** Optionele fixup-vlag: -C of -c (message uit deze commit gebruiken). */
   flag?: string;
+  /** Nieuwe commit message (volledig, subject+body) — alleen ter weergave;
+   * de host is autoritair en negeert deze waarde in setEntries. */
+  editedMessage?: string;
 }
 
 /** Regel die we niet bewerken maar wel op positie tonen: exec, break, label, … */
@@ -75,5 +78,7 @@ export type FromWebview =
   | { type: 'openDiff'; sha: string; file: FileChange }
   | { type: 'copySha'; sha: string }
   | { type: 'openCommit'; sha: string }
+  | { type: 'editMessage'; index: number; message: string }
+  | { type: 'revertMessage'; index: number }
   | { type: 'start' }
   | { type: 'abort' };

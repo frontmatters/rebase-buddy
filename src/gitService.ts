@@ -70,6 +70,13 @@ export class GitService {
     return info;
   }
 
+  /** Absoluut pad voor een message-edit-bestand in de rebase-merge map.
+   * Die map leeft precies zo lang als de rebase (git ruimt 'm op bij
+   * afronden én abort) en overleeft conflict-pauzes. */
+  messageFilePath(filename: string): string {
+    return path.join(this.rebaseDir, filename);
+  }
+
   /** Batch: metadata voor alle sha's in één git-aanroep (zonder file stats). */
   async commitMeta(shas: string[]): Promise<Map<string, CommitDetails>> {
     const out = new Map<string, CommitDetails>();

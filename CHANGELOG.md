@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-09
+
+### Added
+
+- Inline commit message editing: double-click the message in the details
+  panel (or the subject in the list, or use the pencil icon) to rewrite a
+  commit message during the rebase, without the COMMIT_EDITMSG editor stop.
+  Implemented as `pick` plus a host-constructed
+  `exec git commit --amend -F <file>` line; message files live inside
+  git-managed `rebase-merge/` (auto-cleanup on finish and abort, survives
+  conflict pauses, worktree-safe via `--git-path`). Editing a `reword` row
+  converts it to the inline flow; fixup/drop rows are excluded. Edited rows
+  show reword styling, an edited chip and one-click revert.
+
 ## [0.2.0] - 2026-07-09
 
 ### Added
@@ -97,7 +111,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Webview built without `innerHTML` (XSS-safe by construction) under a strict
   CSP with script nonce.
 
-[Unreleased]: https://github.com/frontmatters/rebase-buddy/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/frontmatters/rebase-buddy/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/frontmatters/rebase-buddy/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/frontmatters/rebase-buddy/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/frontmatters/rebase-buddy/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/frontmatters/rebase-buddy/releases/tag/v0.1.0

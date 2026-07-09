@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { abortTodo, parseTodo, serializeTodo } from '../src/todoParser';
+import { abortTodo, buildExecLine, foldOwnExecLines, parseTodo, serializeTodo } from '../src/todoParser';
 import type { ActionEntry } from '../src/shared/messages';
 
 const SAMPLE = `pick ab12cd3 feat: add login form
@@ -106,5 +106,53 @@ describe('serializeTodo — injection hardening', () => {
   it('flattens newlines in raw entries', () => {
     const text = serializeTodo([{ kind: 'raw', text: 'exec npm test\nexec evil' }], '');
     expect(text.split('\n').filter(Boolean)).toHaveLength(1);
+  });
+});
+
+describe('message-edit exec lines', () => {
+  it('buildExecLine constructs a worktree-safe, quoted exec line', () => {
+    expect(buildExecLine('rb-msg-ab12cd3-0')).toBe(
+      'exec git commit --amend -F "$(git rev-parse --git-path \'rebase-merge/rb-msg-ab12cd3-0\')"');
+  });
+
+  it('buildExecLine rejects filenames outside the safe pattern', () => {
+    expect(() => buildExecLine("rb-msg-$(rm -rf)-0")).toThrow();
+    expect(() => buildExecLine('rb-msg-ab12cd3-0; rm -rf /')).toThrow();
+    expect(() => buildExecLine("msg-ab12cd3-0")).toThrow();
+  });
+
+  it('serializeTodo appends the exec line for entries with a known edit', () => {
+    const { entries } = parseTodo('pick ab12cd3 subject\npick f00ba44 other');
+    const text = serializeTodo(entries, '', (entry) =>
+      entry.kind === 'action' && entry.sha === 'ab12cd3' ? 'rb-msg-ab12cd3-0' : undefined);
+    expect(text).toBe(
+      'pick ab12cd3 subject\n'
+      + 'exec git commit --amend -F "$(git rev-parse --git-path \'rebase-merge/rb-msg-ab12cd3-0\')"\n'
+      + 'pick f00ba44 other\n');
+  });
+
+  it('foldOwnExecLines folds a known exec back into the preceding entry', () => {
+    const line = buildExecLine('rb-msg-ab12cd3-0');
+    const { entries } = parseTodo(`pick ab12cd3 subject\n${line}\npick f00ba44 other`);
+    const folded = foldOwnExecLines(entries, (name) => name === 'rb-msg-ab12cd3-0');
+    expect(folded).toHaveLength(2);
+    expect(folded[0]).toMatchObject({ kind: 'action', sha: 'ab12cd3', editedMessage: '' });
+    expect(folded[1]).toMatchObject({ kind: 'action', sha: 'f00ba44' });
+    expect((folded[1] as { editedMessage?: string }).editedMessage).toBeUndefined();
+  });
+
+  it('foldOwnExecLines leaves unknown or orphan exec lines as raw entries', () => {
+    const line = buildExecLine('rb-msg-ab12cd3-0');
+    const { entries } = parseTodo(`pick ab12cd3 subject\n${line}\n${line}`);
+    const folded = foldOwnExecLines(entries, () => false);
+    expect(folded.filter((e) => e.kind === 'raw')).toHaveLength(2);
+  });
+
+  it('round-trips: serialize with exec, parse, fold gives the same model', () => {
+    const { entries } = parseTodo('pick ab12cd3 subject');
+    const text = serializeTodo(entries, '', () => 'rb-msg-ab12cd3-0');
+    const folded = foldOwnExecLines(parseTodo(text).entries, () => true);
+    expect(folded).toHaveLength(1);
+    expect(folded[0]).toMatchObject({ kind: 'action', sha: 'ab12cd3', editedMessage: '' });
   });
 });

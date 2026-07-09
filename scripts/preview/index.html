@@ -133,6 +133,13 @@
           });
         } else if (msg.type === 'requestDetails') {
           send({ type: 'details', sha: msg.sha, details: DETAILS[msg.sha] || null });
+        } else if (msg.type === 'editMessage') {
+          ENTRIES[msg.index].editedMessage = msg.message;
+          if (ENTRIES[msg.index].action === 'reword') ENTRIES[msg.index].action = 'pick';
+          send({ type: 'entries', entries: ENTRIES });
+        } else if (msg.type === 'revertMessage') {
+          delete ENTRIES[msg.index].editedMessage;
+          send({ type: 'entries', entries: ENTRIES });
         } else {
           console.log('[harness]', JSON.stringify(msg));
         }
