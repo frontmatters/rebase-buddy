@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-07-09
+
+### Fixed
+
+- The base commit row now accepts drops: dragging a commit onto it places it
+  at the oldest position, directly on top of the base. That slot was
+  previously unreachable because the drop indicator always inserts above a row.
+
 ## [0.6.0] - 2026-07-09
 
 ### Added
@@ -154,7 +162,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Webview built without `innerHTML` (XSS-safe by construction) under a strict
   CSP with script nonce.
 
-[Unreleased]: https://github.com/frontmatters/rebase-buddy/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/frontmatters/rebase-buddy/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/frontmatters/rebase-buddy/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/frontmatters/rebase-buddy/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/frontmatters/rebase-buddy/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/frontmatters/rebase-buddy/compare/v0.3.0...v0.4.0
