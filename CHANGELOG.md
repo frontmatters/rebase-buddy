@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Resizable panel split: drag the divider between the commit list and the
+  detail panel; the width persists per editor session. The commit message
+  body is vertically resizable too.
+- Custom action dropdown replacing the native select: color-coded actions
+  with inline hints, keyboard navigation and smooth open animation.
+
+### Changed
+
+- Tighter alignment: tabular numerals for stats, dates and hashes; the
+  author/date column hides gracefully when the list gets narrow.
+- Accessibility: listbox/option semantics with selection state, menu roles,
+  and visible focus indicators on all interactive elements.
+- Reduced motion preference is respected.
+
+### Fixed
+
+- Failed commit-detail lookups now surface an error message instead of an
+  endless loading state.
+- Selecting a command line (`exec`, `break`, …) now explains it has no
+  commit details.
+
 ## [0.1.1] - 2026-07-09
 
 ### Fixed

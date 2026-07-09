@@ -6,7 +6,11 @@ import type {
   CommitDetails, FileChange, FromWebview, RepoInfo, ToWebview, TodoAction, TodoEntry,
 } from '../src/shared/messages';
 
-declare function acquireVsCodeApi(): { postMessage(msg: FromWebview): void };
+declare function acquireVsCodeApi(): {
+  postMessage(msg: FromWebview): void;
+  getState(): { detailsW?: number } | undefined;
+  setState(state: { detailsW?: number }): void;
+};
 const vscode = acquireVsCodeApi();
 
 const ACTIONS: TodoAction[] = ['pick', 'reword', 'edit', 'squash', 'fixup', 'drop'];
@@ -20,15 +24,21 @@ const ACTION_HINTS: Record<TodoAction, string> = {
   drop: 'remove commit',
 };
 
+const DETAILS_MIN = 240;
+const DETAILS_MAX = 640;
+
 let entries: TodoEntry[] = [];
 let repo: RepoInfo | undefined;
 let selected = -1;
 let dragFrom = -1;
 let abortArmed = false;
 let abortTimer: ReturnType<typeof setTimeout> | undefined;
+let detailsW = vscode.getState?.()?.detailsW ?? 340;
 const details = new Map<string, CommitDetails>();
+const detailErrors = new Map<string, string>();
 
 const app = document.getElementById('app')!;
+document.documentElement.style.setProperty('--details-w', `${detailsW}px`);
 
 // ---------- DOM helpers (geen innerHTML) ----------
 
@@ -64,6 +74,7 @@ const GRIP_D = 'M6 3.5a1 1 0 110-2 1 1 0 010 2zm4 0a1 1 0 110-2 1 1 0 010 2zM6 9
 const COPY_D = 'M5 2h8l1 1v8h-1V3H5V2zM3 5h8l1 1v8l-1 1H3l-1-1V6l1-1zm0 1v8h8V6H3z';
 const LINK_D = 'M9 2h5v5h-1V3.7L7.85 8.85l-.7-.7L12.3 3H9V2zM3.5 4H7v1H4v8h8V9h1v4.5l-.5.5h-9l-.5-.5v-9l.5-.5z';
 const TERMINAL_D = 'M2.5 3h11l.5.5v9l-.5.5h-11l-.5-.5v-9l.5-.5zM3 12h10V4H3v8zm2.3-6.3l2 2v.6l-2 2-.6-.6L6.4 8 4.7 6.3l.6-.6zM8 10h3v1H8v-1z';
+const CHEV_D = 'M3.9 5.7l.7-.7L8 8.4l3.4-3.4.7.7L8 9.8 3.9 5.7z';
 
 function post(msg: FromWebview): void {
   vscode.postMessage(msg);
@@ -83,9 +94,77 @@ function relativeDate(iso: string): string {
   return `${Math.round(months / 12)}y`;
 }
 
+// ---------- custom action-menu ----------
+
+let menuEl: HTMLElement | null = null;
+
+function closeMenu(): void {
+  menuEl?.remove();
+  menuEl = null;
+}
+
+function openActionMenu(index: number, anchor: HTMLElement): void {
+  const entry = entries[index];
+  if (entry?.kind !== 'action') return;
+  closeMenu();
+
+  const menu = el('div', 'menu');
+  menu.setAttribute('role', 'menu');
+  let focusTarget: HTMLElement | null = null;
+
+  for (const action of ACTIONS) {
+    const current = action === entry.action;
+    const item = el('button', `menu__item${current ? ' menu__item--current' : ''}`,
+      el('span', `menu__label menu__label--${action}`, action),
+      el('span', 'menu__hint', ACTION_HINTS[action]),
+    );
+    item.setAttribute('role', 'menuitem');
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeMenu();
+      setAction(index, action);
+    });
+    if (current) focusTarget = item;
+    menu.append(item);
+  }
+
+  menu.addEventListener('keydown', (e) => {
+    const items = Array.from(menu.querySelectorAll<HTMLElement>('.menu__item'));
+    const at = items.indexOf(document.activeElement as HTMLElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const next = e.key === 'ArrowDown' ? at + 1 : at - 1;
+      items[(next + items.length) % items.length]?.focus();
+    } else if (e.key === 'Escape') {
+      e.stopPropagation();
+      closeMenu();
+      anchor.focus();
+    }
+  });
+
+  const rect = anchor.getBoundingClientRect();
+  menu.style.left = `${rect.left}px`;
+  menu.style.top = `${rect.bottom + 2}px`;
+  document.body.append(menu);
+  const menuRect = menu.getBoundingClientRect();
+  if (menuRect.bottom > window.innerHeight - 8) {
+    menu.style.top = `${rect.top - menuRect.height - 2}px`;
+  }
+  if (menuRect.right > window.innerWidth - 8) {
+    menu.style.left = `${window.innerWidth - menuRect.width - 8}px`;
+  }
+  menuEl = menu;
+  (focusTarget ?? menu.querySelector<HTMLElement>('.menu__item'))?.focus();
+}
+
+document.addEventListener('click', (e) => {
+  if (menuEl && !menuEl.contains(e.target as Node)) closeMenu();
+});
+
 // ---------- rendering ----------
 
 function render(): void {
+  closeMenu();
   app.replaceChildren(topbar(), panes(), statusbar());
 }
 
@@ -128,11 +207,39 @@ function topbar(): HTMLElement {
 function panes(): HTMLElement {
   const list = el('section', 'list',
     el('div', 'list__head', el('span', undefined, 'applied top to bottom · oldest first')));
+  list.setAttribute('role', 'listbox');
+  list.setAttribute('aria-label', 'Rebase todo list');
   entries.forEach((entry, i) => list.append(row(entry, i)));
+  list.addEventListener('scroll', closeMenu);
 
   const aside = el('aside', 'details');
   aside.append(...detailsChildren());
-  return el('main', 'panes', list, aside);
+  return el('main', 'panes', list, splitter(), aside);
+}
+
+function splitter(): HTMLElement {
+  const bar = el('div', 'splitter');
+  bar.title = 'Drag to resize';
+  bar.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    closeMenu();
+    bar.classList.add('splitter--active');
+    document.body.classList.add('is-resizing');
+    const onMove = (ev: MouseEvent) => {
+      detailsW = Math.min(DETAILS_MAX, Math.max(DETAILS_MIN, window.innerWidth - ev.clientX - 3));
+      document.documentElement.style.setProperty('--details-w', `${detailsW}px`);
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      bar.classList.remove('splitter--active');
+      document.body.classList.remove('is-resizing');
+      vscode.setState?.({ detailsW });
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+  return bar;
 }
 
 function row(entry: TodoEntry, i: number): HTMLElement {
@@ -149,22 +256,24 @@ function row(entry: TodoEntry, i: number): HTMLElement {
     const joined = entry.action === 'squash' || entry.action === 'fixup';
     const dropped = entry.action === 'drop';
 
-    const select = el('select', `action action--${entry.action}`) as HTMLSelectElement;
-    select.title = ACTION_HINTS[entry.action];
-    for (const action of ACTIONS) {
-      const option = el('option', undefined, action) as HTMLOptionElement;
-      option.value = action;
-      option.selected = action === entry.action;
-      select.append(option);
-    }
-    select.addEventListener('click', (e) => e.stopPropagation());
-    select.addEventListener('change', () => setAction(i, select.value as TodoAction));
+    const actionBtn = el('button', `action action--${entry.action}`,
+      el('span', 'action__label', entry.action));
+    actionBtn.append(svgIcon(CHEV_D, 12));
+    actionBtn.title = ACTION_HINTS[entry.action];
+    actionBtn.setAttribute('aria-haspopup', 'menu');
+    actionBtn.setAttribute('aria-label', `Action: ${entry.action}`);
+    actionBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (selected !== i) select(i); // re-rendert; anchor daarna opnieuw opzoeken
+      const anchor = document.querySelector<HTMLElement>(`.row[data-i="${i}"] .action`) ?? actionBtn;
+      openActionMenu(i, anchor);
+    });
 
     node = el('div',
       `row row--action${joined ? ' row--joined' : ''}${dropped ? ' row--dropped' : ''}`,
       grip,
       el('span', 'row__connector'),
-      select,
+      actionBtn,
       el('code', 'row__sha', entry.sha.slice(0, 7)),
       el('span', 'row__subject', meta?.subject ?? entry.subject),
       el('span', 'row__meta', meta ? `${meta.author} · ${relativeDate(meta.date)}` : ''),
@@ -172,6 +281,8 @@ function row(entry: TodoEntry, i: number): HTMLElement {
   }
 
   if (i === selected) node.classList.add('row--selected');
+  node.setAttribute('role', 'option');
+  node.setAttribute('aria-selected', String(i === selected));
   node.dataset.i = String(i);
   node.draggable = true;
   node.addEventListener('click', () => select(i));
@@ -198,7 +309,13 @@ function row(entry: TodoEntry, i: number): HTMLElement {
 
 function detailsChildren(): Node[] {
   const entry = entries[selected];
-  if (!entry || entry.kind !== 'action') {
+  if (entry?.kind === 'raw') {
+    return [el('div', 'details__empty',
+      el('p', undefined, el('code', undefined, entry.text)),
+      el('p', 'details__empty-sub', 'Command lines run during the rebase and have no commit details.'),
+    )];
+  }
+  if (!entry) {
     return [el('div', 'details__empty',
       el('p', undefined, 'Select a commit to inspect it.'),
       el('p', 'details__empty-sub', 'Reorder with drag & drop, change actions inline, then start the rebase.'),
@@ -207,9 +324,12 @@ function detailsChildren(): Node[] {
 
   const meta = details.get(entry.sha);
   if (!meta) {
+    const error = detailErrors.get(entry.sha);
     return [el('div', 'details__empty',
       el('p', undefined, el('code', undefined, entry.sha)),
-      el('p', 'details__empty-sub', 'No metadata available for this commit.'),
+      el('p', 'details__empty-sub', error
+        ? `Could not load commit details: ${error}`
+        : 'No metadata available for this commit.'),
     )];
   }
 
@@ -339,7 +459,7 @@ function sync(): void {
 }
 
 document.addEventListener('keydown', (e) => {
-  if (e.target instanceof HTMLSelectElement) return;
+  if (menuEl) return; // het open menu handelt zijn eigen toetsen af
   const action = ACTION_KEYS[e.key.toLowerCase()];
 
   if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -372,11 +492,15 @@ window.addEventListener('message', (event: MessageEvent<ToWebview>) => {
       break;
     case 'details':
       if (msg.details) {
+        detailErrors.delete(msg.sha);
         const existing = details.get(msg.sha);
         // Een latere payload zonder files mag een rijkere niet overschrijven.
         if (!existing || msg.details.files.length > 0 || existing.files.length === 0) {
           details.set(msg.sha, msg.details);
         }
+        render();
+      } else if (msg.error) {
+        detailErrors.set(msg.sha, msg.error);
         render();
       }
       break;

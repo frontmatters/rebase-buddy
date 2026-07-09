@@ -115,8 +115,11 @@
     setTimeout(function () { window.postMessage(msg, '*'); }, 0);
   }
 
+  var mockState;
   window.acquireVsCodeApi = function () {
     return {
+      getState: function () { return mockState; },
+      setState: function (s) { mockState = s; },
       postMessage: function (msg) {
         if (msg.type === 'ready') {
           send({ type: 'init', entries: ENTRIES, repo: { branch: 'feature', onto: '4a5b6c7', ontoSubject: 'chore: initial scaffold', root: '/tmp/fixture', commitUrlBase: 'https://example.com/owner/repo/commit/' } });

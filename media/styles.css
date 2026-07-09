@@ -1,4 +1,4 @@
-/* Rebaser webview — flat, dunne borders, VS Code theme-variabelen.
+/* Rebase Buddy webview — flat, dunne borders, VS Code theme-variabelen.
    Kleurcodering per rebase-actie via --vscode-charts-* (theme-aware). */
 
 :root {
@@ -37,6 +37,43 @@ body {
 code, kbd, .row__sha, .row__rawtext, .details__sha, .details__body {
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 12px;
+}
+
+/* Cijfers overal even breed: stats, datums en sha-kolommen lijnen strak uit. */
+.diffstat, .row__meta, .row__sha, .details__byline, .details__sha {
+  font-variant-numeric: tabular-nums;
+}
+
+body.is-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* ---------- interactie: states & motion ---------- */
+
+.btn:focus-visible,
+.iconbtn:focus-visible,
+.file:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.row,
+.file,
+.btn,
+.iconbtn,
+.action {
+  transition: background-color 100ms ease-out;
+}
+
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu { animation: none; }
+  .row, .file, .btn, .iconbtn, .action { transition: none; }
 }
 
 /* ---------- topbar ---------- */
@@ -108,20 +145,48 @@ code, kbd, .row__sha, .row__rawtext, .details__sha, .details__body {
 
 .panes {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  grid-template-columns: minmax(0, 1fr) 7px minmax(0, var(--details-w, 340px));
   min-height: 0;
+}
+
+/* ---------- splitter ---------- */
+
+.splitter {
+  position: relative;
+  cursor: col-resize;
+}
+
+.splitter::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 1px;
+  background: var(--r-border);
+}
+
+.splitter:hover::before,
+.splitter--active::before {
+  left: 2px;
+  width: 3px;
+  background: var(--vscode-focusBorder);
 }
 
 /* ---------- commit-lijst ---------- */
 
 .list {
   overflow-y: auto;
-  border-right: 1px solid var(--r-border);
+  container-type: inline-size;
+}
+
+@container (max-width: 460px) {
+  .row__meta { display: none; }
 }
 
 .list__head {
   padding: 6px 12px;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--vscode-descriptionForeground);
@@ -149,16 +214,6 @@ code, kbd, .row__sha, .row__rawtext, .details__sha, .details__body {
 .row--selected {
   background: var(--vscode-list-activeSelectionBackground);
   color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
-}
-
-.row--selected::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: -1px;
-  width: 2px;
-  background: var(--vscode-focusBorder);
 }
 
 .row--dragging { opacity: 0.4; }
@@ -233,25 +288,84 @@ code, kbd, .row__sha, .row__rawtext, .details__sha, .details__body {
   text-overflow: ellipsis;
 }
 
-/* ---------- actie-select ---------- */
+/* ---------- actie-knop + custom menu ---------- */
 
 .action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 11px;
-  padding: 2px 4px;
+  line-height: 1;
+  padding: 3px 5px 3px 7px;
   background: transparent;
   border: 1px solid var(--r-border);
   border-radius: 2px;
   cursor: pointer;
   width: 84px;
-  appearance: none;
+  color: inherit;
 }
 
-.action:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+.action:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
 
-.action option {
-  background: var(--vscode-dropdown-background);
-  color: var(--vscode-dropdown-foreground);
+.action svg { opacity: 0.55; flex: none; }
+.action:hover svg { opacity: 1; }
+
+.menu {
+  position: fixed;
+  z-index: 100;
+  min-width: 236px;
+  padding: 3px;
+  animation: menu-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  background: var(--vscode-dropdown-background, var(--vscode-editor-background));
+  border: 1px solid var(--r-border);
+  border-radius: 2px;
+  box-shadow: 0 4px 14px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.25));
+}
+
+.menu__item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 5px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 2px;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--vscode-dropdown-foreground, var(--vscode-foreground));
+}
+
+.menu__item:hover,
+.menu__item:focus-visible {
+  background: var(--vscode-list-hoverBackground);
+  outline: none;
+}
+
+.menu__item--current {
+  background: var(--vscode-list-activeSelectionBackground);
+}
+
+.menu__label {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 11px;
+}
+
+.menu__label--pick   { color: var(--r-pick); }
+.menu__label--reword { color: var(--r-reword); }
+.menu__label--edit   { color: var(--r-edit); }
+.menu__label--squash { color: var(--r-squash); }
+.menu__label--fixup  { color: var(--r-fixup); }
+.menu__label--drop   { color: var(--r-drop); }
+
+.menu__hint {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
 }
 
 .action--pick   { color: var(--r-pick); }
@@ -289,7 +403,7 @@ code, kbd, .row__sha, .row__rawtext, .details__sha, .details__body {
 }
 
 .chip {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 2px 7px;
@@ -353,15 +467,18 @@ code, kbd, .row__sha, .row__rawtext, .details__sha, .details__body {
   overflow-wrap: anywhere;
   color: var(--vscode-foreground);
   background: var(--vscode-textCodeBlock-background, transparent);
-  max-height: 180px;
+  min-height: 40px;
+  max-height: 60vh;
+  height: 120px;
   overflow-y: auto;
+  resize: vertical;
 }
 
 .details__files-head {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--vscode-descriptionForeground);
@@ -436,7 +553,7 @@ code, kbd, .row__sha, .row__rawtext, .details__sha, .details__body {
 }
 
 .statusbar kbd {
-  font-size: 10px;
+  font-size: 11px;
   padding: 1px 4px;
   border: 1px solid var(--r-border);
   border-radius: 2px;
