@@ -26,7 +26,7 @@ function cliPath(): string {
 
 export function activate(context: vscode.ExtensionContext): void {
   const services = new Map<string, GitService>();
-  const output = vscode.window.createOutputChannel('Rebaser');
+  const output = vscode.window.createOutputChannel('Rebase Buddy');
 
   context.subscriptions.push(
     output,

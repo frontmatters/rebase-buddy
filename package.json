@@ -13,12 +13,12 @@
   "icon": "icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/frontmatters/rebaser.git"
+    "url": "https://github.com/frontmatters/rebase-buddy.git"
   },
   "bugs": {
-    "url": "https://github.com/frontmatters/rebaser/issues"
+    "url": "https://github.com/frontmatters/rebase-buddy/issues"
   },
-  "homepage": "https://github.com/frontmatters/rebaser#readme",
+  "homepage": "https://github.com/frontmatters/rebase-buddy#readme",
   "categories": [
     "SCM Providers"
   ],

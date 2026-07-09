@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - One-click native VS Code diff per file via a virtual git content provider.
 - Copy full commit id and open-commit-on-remote (GitHub/Gitea/GitLab) from the
   details panel.
-- `Rebaser: Enable`/`Disable` commands that set `git config --global
+- `Rebase Buddy: Enable`/`Disable` commands that set `git config --global
   sequence.editor` to this VS Code install and restore the previous value.
 - Start rebase and two-step abort from the editor; passthrough display for
   `exec`, `break`, `label` and other non-commit todo lines.
@@ -34,5 +34,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Webview built without `innerHTML` (XSS-safe by construction) under a strict
   CSP with script nonce.
 
-[Unreleased]: https://github.com/frontmatters/rebaser/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/frontmatters/rebaser/releases/tag/v0.1.0
+[Unreleased]: https://github.com/frontmatters/rebase-buddy/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/frontmatters/rebase-buddy/releases/tag/v0.1.0

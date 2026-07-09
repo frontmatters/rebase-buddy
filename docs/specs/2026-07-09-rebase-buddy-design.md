@@ -1,4 +1,6 @@
-# Rebaser — Design Spec (Fase 1)
+# Rebase Buddy — Design Spec (Fase 1)
+
+> Historisch document; geschreven onder de werktitel "Rebaser", bij publicatie hernoemd naar **Rebase Buddy** (`frontmatters.rebase-buddy`).
 
 **Datum:** 2026-07-09
 **Status:** Goedgekeurd design, fase 1
@@ -101,7 +103,7 @@ Commit graph, blame, autosquash-detectie (`fixup!`), in-webview diff-preview, mu
 ## Projectstructuur
 
 ```
-rebaser/
+rebase-buddy/
 ├── package.json          # extensie-manifest + esbuild scripts
 ├── src/
 │   ├── extension.ts      # activatie, registraties

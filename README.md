@@ -43,7 +43,7 @@ Open the folder in VS Code and press F5 for an Extension Development Host.
 
 ## Design
 
-See `docs/superpowers/specs/2026-07-09-rebaser-design.md`.
+See `docs/specs/2026-07-09-rebase-buddy-design.md`.
 
 ---
 

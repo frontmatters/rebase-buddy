@@ -3,7 +3,7 @@
 # testen: cd "$(scripts/fixture-repo.sh)" && git rebase -i main
 set -euo pipefail
 
-dir="$(mktemp -d /tmp/rebaser-fixture.XXXXXX)"
+dir="$(mktemp -d /tmp/rebase-buddy-fixture.XXXXXX)"
 cd "$dir"
 
 git init -q -b main
