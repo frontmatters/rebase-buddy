@@ -40,6 +40,7 @@ let detailsW = vscode.getState?.()?.detailsW ?? 340;
 let newestFirst = vscode.getState?.()?.newestFirst ?? false;
 let detailsOpen = vscode.getState?.()?.detailsOpen ?? true;
 let confirmAbort = true;
+let showBaseCommit = true;
 let editingIndex: number | null = null;
 const details = new Map<string, CommitDetails>();
 const detailErrors = new Map<string, string>();
@@ -334,7 +335,11 @@ function panes(): HTMLElement {
   list.setAttribute('aria-label', 'Rebase todo list');
   const order = entries.map((_, i) => i);
   if (newestFirst) order.reverse();
+  const base = showBaseCommit && repo?.onto ? baseRow() : null;
+  // Newest-first: basis onderaan (fundament); oldest-first: basis bovenaan.
+  if (base && !newestFirst) list.append(base);
   for (const i of order) list.append(row(entries[i], i));
+  if (base && newestFirst) list.append(base);
   list.addEventListener('scroll', closeMenu);
 
   if (!detailsOpen) {
@@ -381,6 +386,19 @@ function splitter(): HTMLElement {
     document.addEventListener('mouseup', onUp);
   });
   return bar;
+}
+
+function baseRow(): HTMLElement {
+  const node = el('div', 'row row--base',
+    el('span', 'row__grip'),
+    el('span', 'row__base-tag', 'base'),
+    el('code', 'row__sha', (repo?.onto ?? '').slice(0, 7)),
+    el('span'),
+    el('span', 'row__subject', repo?.ontoSubject ?? ''),
+    el('span', 'row__meta', 'your changes land on top'),
+  );
+  node.title = 'The commit your rebase is applied onto (read-only)';
+  return node;
 }
 
 function row(entry: TodoEntry, i: number): HTMLElement {
@@ -825,6 +843,7 @@ window.addEventListener('message', (event: MessageEvent<ToWebview>) => {
       // Settings gelden als default; sessie-state (toggle/splitter) wint.
       const state = vscode.getState?.();
       confirmAbort = msg.prefs.confirmAbort;
+      showBaseCommit = msg.prefs.showBaseCommit;
       if (state?.newestFirst === undefined) {
         newestFirst = msg.prefs.defaultOrder === 'newest-first';
       }

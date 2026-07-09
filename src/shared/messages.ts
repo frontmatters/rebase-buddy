@@ -64,6 +64,7 @@ export interface UserPrefs {
   defaultOrder: 'oldest-first' | 'newest-first';
   detailsWidth: number;
   confirmAbort: boolean;
+  showBaseCommit: boolean;
 }
 
 export type ToWebview =

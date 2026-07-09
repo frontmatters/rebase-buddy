@@ -774,3 +774,33 @@ body.is-resizing {
   border-radius: 2px;
   background: var(--vscode-textCodeBlock-background, transparent);
 }
+
+/* ---------- basis-commit (read-only referentie) ---------- */
+
+.row--base {
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.7;
+  cursor: default;
+  background: var(--vscode-textCodeBlock-background, transparent);
+}
+
+/* base-tag overspant de connector + action kolommen; sha en subject blijven
+   zo exact onder die van de commit-rijen uitgelijnd. */
+.row--base .row__base-tag { grid-column: 2 / 4; }
+
+.row--base:hover { background: var(--vscode-textCodeBlock-background, transparent); }
+
+.row--base .row__sha { padding-left: 0; }
+
+.row__base-tag {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vscode-descriptionForeground);
+  border: 1px solid var(--r-border);
+  border-radius: 2px;
+  padding: 1px 4px;
+  text-align: center;
+}
+
+.row--base .row__meta { font-style: italic; }
