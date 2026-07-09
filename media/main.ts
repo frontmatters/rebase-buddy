@@ -43,6 +43,28 @@ function saveState(): void {
   vscode.setState?.({ detailsW, newestFirst });
 }
 
+/* Squash/fixup smelt in de vorige commit (in todo-volgorde); drops vallen
+ * weg als doelwit. Zonder eerder niet-gedropt commit is de actie ongeldig
+ * en zou git afbreken met "cannot 'squash' without a previous commit". */
+function hasMeldTarget(index: number): boolean {
+  for (let j = 0; j < index; j++) {
+    const e = entries[j];
+    if (e.kind === 'action' && e.action !== 'drop') return true;
+  }
+  return false;
+}
+
+function isInvalidMeld(index: number): boolean {
+  const e = entries[index];
+  return e?.kind === 'action'
+    && (e.action === 'squash' || e.action === 'fixup')
+    && !hasMeldTarget(index);
+}
+
+function firstInvalidMeld(): number {
+  return entries.findIndex((_, i) => isInvalidMeld(i));
+}
+
 const app = document.getElementById('app')!;
 document.documentElement.style.setProperty('--details-w', `${detailsW}px`);
 
@@ -120,13 +142,18 @@ function openActionMenu(index: number, anchor: HTMLElement): void {
 
   for (const action of ACTIONS) {
     const current = action === entry.action;
-    const item = el('button', `menu__item${current ? ' menu__item--current' : ''}`,
+    const meld = action === 'squash' || action === 'fixup';
+    const disabled = meld && !hasMeldTarget(index);
+    const item = el('button',
+      `menu__item${current ? ' menu__item--current' : ''}${disabled ? ' menu__item--disabled' : ''}`,
       el('span', `menu__label menu__label--${action}`, action),
-      el('span', 'menu__hint', ACTION_HINTS[action]),
+      el('span', 'menu__hint', disabled ? 'needs an earlier commit to meld into' : ACTION_HINTS[action]),
     );
     item.setAttribute('role', 'menuitem');
+    item.setAttribute('aria-disabled', String(disabled));
     item.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (disabled) return;
       closeMenu();
       setAction(index, action);
     });
@@ -199,6 +226,11 @@ function topbar(): HTMLElement {
   });
 
   const startBtn = el('button', 'btn btn--primary', 'Start rebase');
+  const invalidAt = firstInvalidMeld();
+  if (invalidAt >= 0) {
+    startBtn.disabled = true;
+    startBtn.title = 'A squash/fixup row has no earlier commit to meld into';
+  }
   startBtn.addEventListener('click', () => post({ type: 'start' }));
 
   return el('header', 'topbar',
@@ -276,10 +308,13 @@ function row(entry: TodoEntry, i: number): HTMLElement {
     const joined = entry.action === 'squash' || entry.action === 'fixup';
     const dropped = entry.action === 'drop';
 
-    const actionBtn = el('button', `action action--${entry.action}`,
+    const invalid = isInvalidMeld(i);
+    const actionBtn = el('button', `action action--${entry.action}${invalid ? ' action--invalid' : ''}`,
       el('span', 'action__label', entry.action));
     actionBtn.append(svgIcon(CHEV_D, 12));
-    actionBtn.title = ACTION_HINTS[entry.action];
+    actionBtn.title = invalid
+      ? `Invalid: no earlier commit to ${entry.action} into. Pick another action or move this row down.`
+      : ACTION_HINTS[entry.action];
     actionBtn.setAttribute('aria-haspopup', 'menu');
     actionBtn.setAttribute('aria-label', `Action: ${entry.action}`);
     actionBtn.addEventListener('click', (e) => {
@@ -440,8 +475,11 @@ function statusbar(): HTMLElement {
     if (i > 0) keys.append(' · ');
     keys.append(el('kbd', undefined, key), ` ${label}`);
   });
+  const invalid = firstInvalidMeld() >= 0;
   return el('footer', 'statusbar',
-    el('span', 'statusbar__hint', 'closing this tab starts the rebase with the current state'),
+    el('span', `statusbar__hint${invalid ? ' statusbar__hint--warn' : ''}`, invalid
+      ? 'the first commit cannot squash or fixup: there is nothing earlier to meld into'
+      : 'closing this tab starts the rebase with the current state'),
     keys,
   );
 }
@@ -460,6 +498,7 @@ function select(i: number): void {
 function setAction(i: number, action: TodoAction): void {
   const entry = entries[i];
   if (entry?.kind !== 'action') return;
+  if ((action === 'squash' || action === 'fixup') && !hasMeldTarget(i)) return;
   entry.action = action;
   if (action !== 'fixup') delete entry.flag;
   selected = i;

@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Display-order toggle in the list header: oldest first (git's todo order)
   or newest first (log order). Arrow navigation and squash/fixup connectors
   follow the chosen direction; the rebase itself always applies oldest first.
+- Squash/fixup validation: the menu disables meld actions when no earlier
+  non-dropped commit exists, and if reordering creates an invalid meld the
+  row is flagged and Start rebase is blocked with an explanation, instead of
+  letting git fail mid-rebase.
 
 ### Changed
 

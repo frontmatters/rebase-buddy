@@ -352,6 +352,28 @@ body.is-resizing {
 .action svg { opacity: 0.55; flex: none; }
 .action:hover svg { opacity: 1; }
 
+.action--invalid {
+  color: var(--r-drop) !important;
+  border-color: var(--r-drop) !important;
+  border-style: dashed;
+}
+
+.menu__item--disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.menu__item--disabled:hover { background: transparent; }
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn--primary:disabled:hover { background: var(--vscode-button-background); }
+
+.statusbar__hint--warn { color: var(--r-drop); }
+
 .menu {
   position: fixed;
   z-index: 100;
