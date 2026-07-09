@@ -49,11 +49,11 @@ Eén TypeScript VS Code-extensie, twee lagen:
 ### Extension host
 
 - **`RebaseEditorProvider`** — implementeert `vscode.CustomTextEditorProvider`, geregistreerd op filename-pattern `**/rebase-merge/git-rebase-todo` (alleen interactieve rebases gebruiken dit pad). Parst todo-regels naar een model, stuurt state naar de webview, vertaalt webview-mutaties terug naar tekst-edits.
-- **`GitService`** — voert `git`-commando's uit als child process in de repo-root (afgeleid van het todo-bestandspad: twee niveaus omhoog vanaf `.git/rebase-merge/`). Levert per SHA: volledige message, author, datum, gewijzigde bestanden met +/- stats.
+- **`GitService`** — voert `git`-commando's uit als child process. De repo-root wordt robuust geresolved vanaf het todo-bestandspad: `git --git-dir=<dir-boven-rebase-merge> rev-parse --show-toplevel`, met fallback op het `gitdir`-bestand (linked worktrees) en als laatste redmiddel twee niveaus omhoog. Levert per SHA: volledige message, author, datum, gewijzigde bestanden met +/- stats. Opgehaalde metadata wordt per SHA gecachet voor de duur van de sessie.
 - **`TodoParser`** — puur, testbaar: todo-tekst ↔ model (regels: `pick|reword|edit|squash|fixup|drop <sha> <subject>`, comments, lege regels; `break`/`exec`/`label` e.d. worden ongewijzigd doorgelaten en read-only getoond).
 - **Commands:**
-  - `rebaser.enable` — zet `git config --global sequence.editor "code --wait"`.
-  - `rebaser.disable` — verwijdert die config-waarde weer (`git config --global --unset sequence.editor`).
+  - `rebaser.enable` — bewaart de huidige `sequence.editor`-waarde (in `globalState`) en zet dan `git config --global sequence.editor "code --wait"`.
+  - `rebaser.disable` — herstelt de bewaarde vorige waarde, of unset de config als er geen vorige waarde was.
 
 ### Webview UI
 
@@ -65,7 +65,7 @@ Eén TypeScript VS Code-extensie, twee lagen:
 
 Typed messages, gedeelde TypeScript-types in `src/shared/`:
 
-- extension → webview: `init { entries, repoInfo }`, `commitDetails { sha, details }`, `externalEdit { entries }` (bij wijziging van het document buiten de webview om).
+- extension → webview: `init { entries, repoInfo }`, `commitDetails { sha, details }`, `externalEdit { entries }` (bij wijziging van het document buiten de webview om; gedebounced ~150 ms zodat een externe editor-sessie geen stale tussenstanden rendert).
 - webview → extension: `ready`, `moveEntry { from, to }`, `setAction { index, action }`, `selectCommit { sha }`, `openDiff { sha, path }`, `start`, `abort`.
 
 ## Dataflow (happy path)
