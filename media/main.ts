@@ -398,6 +398,24 @@ function baseRow(): HTMLElement {
     el('span', 'row__meta', 'your changes land on top'),
   );
   node.title = 'The commit your rebase is applied onto (read-only)';
+
+  // De basis is geen commit, maar wél een geldig drop-doel: erop droppen legt
+  // het gesleepte blok op de oudste positie (direct bovenop de base). Zonder
+  // dit is die onderste plek onbereikbaar, want de dropline voegt altijd
+  // vóór een rij in.
+  node.addEventListener('dragover', (e) => {
+    if (dragFrom < 0) return;
+    e.preventDefault();
+    document.querySelectorAll('.row').forEach((r) => r.classList.remove('row--dropline'));
+    node.classList.add('row--dropline');
+  });
+  node.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (dragFrom < 0) return;
+    const indices = selectedSet.size > 1 && selectedSet.has(dragFrom)
+      ? Array.from(selectedSet) : [dragFrom];
+    moveToBase(indices);
+  });
   return node;
 }
 
@@ -797,6 +815,20 @@ function moveBlock(indices: number[], targetCanonical: number): void {
 
 function move(from: number, to: number): void {
   moveBlock([from], to);
+}
+
+/** Leg het blok op de oudste positie: direct bovenop de base-commit (de
+ * plek naast de base-rij, ongeacht weergave-richting). */
+function moveToBase(indices: number[]): void {
+  const moveSet = new Set(indices.map((ci) => entries[ci]));
+  const viewObjs = viewOrder().map((ci) => entries[ci]);
+  const moving = viewObjs.filter((o) => moveSet.has(o));
+  const rest = viewObjs.filter((o) => !moveSet.has(o));
+  // De base staat aan het oudste eind van de weergave: onderaan in
+  // newest-first, bovenaan in oldest-first.
+  if (newestFirst) rest.push(...moving);
+  else rest.unshift(...moving);
+  commitView(rest, moving);
 }
 
 /** ⌥↑/⌥↓: schuif de selectie één plek op in WEERGAVE-richting. */
