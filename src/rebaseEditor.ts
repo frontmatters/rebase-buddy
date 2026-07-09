@@ -6,15 +6,26 @@ import type { FileChange, FromWebview, ToWebview } from './shared/messages';
 
 export const DIFF_SCHEME = 'rebaser-git';
 
+/** SHA's uit de webview stromen door naar git-argumenten; valideer het
+ * formaat zodat ze nooit als git-optie geïnterpreteerd kunnen worden
+ * (defense-in-depth naast --end-of-options in GitService). */
+function isValidSha(sha: unknown): sha is string {
+  return typeof sha === 'string' && /^[0-9a-f]{4,40}$/i.test(sha);
+}
+
 /** Levert bestandsinhoud op een revisie voor de native diff-editor. */
 export class GitContentProvider implements vscode.TextDocumentContentProvider {
   constructor(private readonly services: Map<string, GitService>) {}
 
   async provideTextDocumentContent(uri: vscode.Uri): Promise<string> {
-    const { root, rev, file } = JSON.parse(uri.query) as { root: string; rev: string; file: string };
-    if (!rev) return '';
-    const service = this.services.get(root);
-    return service ? service.fileAt(rev, file) : '';
+    try {
+      const { root, rev, file } = JSON.parse(uri.query) as { root: string; rev: string; file: string };
+      if (!rev || typeof file !== 'string') return '';
+      const service = this.services.get(root);
+      return service ? await service.fileAt(rev, file) : '';
+    } catch {
+      return '';
+    }
   }
 }
 
@@ -40,9 +51,11 @@ export class RebaseEditorProvider implements vscode.CustomTextEditorProvider {
 
     let trailer = parseTodo(document.getText()).trailer;
     let applyingEdit = false;
+    let generation = 0;
     const post = (msg: ToWebview) => panel.webview.postMessage(msg);
 
     const sendEntries = async (initial: boolean) => {
+      const gen = ++generation;
       const parsed = parseTodo(document.getText());
       trailer = parsed.trailer;
       if (initial) {
@@ -53,6 +66,7 @@ export class RebaseEditorProvider implements vscode.CustomTextEditorProvider {
       // Metadata nadruppelen: één batch-call voor alle sha's in de todo.
       const shas = parsed.entries.flatMap((e) => (e.kind === 'action' ? [e.sha] : []));
       const meta = await service.commitMeta(shas);
+      if (gen !== generation) return; // nieuwere staat onderweg; deze batch is stale
       for (const [sha, details] of meta) post({ type: 'details', sha, details });
     };
 
@@ -63,6 +77,7 @@ export class RebaseEditorProvider implements vscode.CustomTextEditorProvider {
             await sendEntries(true);
             break;
           case 'setEntries': {
+            if (!Array.isArray(msg.entries)) break;
             const newText = serializeTodo(msg.entries, trailer);
             if (newText !== document.getText()) {
               applyingEdit = true;
@@ -75,9 +90,11 @@ export class RebaseEditorProvider implements vscode.CustomTextEditorProvider {
             break;
           }
           case 'requestDetails':
+            if (!isValidSha(msg.sha)) break;
             post({ type: 'details', sha: msg.sha, details: await service.commitDetails(msg.sha) });
             break;
           case 'openDiff':
+            if (!isValidSha(msg.sha) || typeof msg.file?.path !== 'string') break;
             await this.openDiff(service, msg.sha, msg.file);
             break;
           case 'start':

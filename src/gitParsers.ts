@@ -59,6 +59,7 @@ export function parseNumstatZ(output: string): NumstatEntry[] {
     if (match[3] !== '') {
       entries.push({ path: match[3], added, deleted });
     } else {
+      if (fields[i + 1] === undefined || fields[i + 2] === undefined) break;
       entries.push({ path: fields[i + 2], oldPath: fields[i + 1], added, deleted });
       i += 2;
     }
@@ -82,9 +83,11 @@ export function parseNameStatusZ(output: string): NameStatusEntry[] {
     if (field.trim() === '') continue;
     const status = field[0];
     if (status === 'R' || status === 'C') {
+      if (fields[i + 1] === undefined || fields[i + 2] === undefined) break;
       entries.push({ status, oldPath: fields[i + 1], path: fields[i + 2] });
       i += 2;
     } else {
+      if (fields[i + 1] === undefined) break;
       entries.push({ status, path: fields[i + 1] });
       i += 1;
     }

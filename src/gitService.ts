@@ -76,7 +76,7 @@ export class GitService {
 
     try {
       const records = parseCommitRecords(await git(
-        ['show', '--no-patch', `--format=${COMMIT_FORMAT}`, ...shas], this.repoRoot,
+        ['show', '--no-patch', `--format=${COMMIT_FORMAT}`, '--end-of-options', ...shas], this.repoRoot,
       ));
       for (let i = 0; i < records.length; i++) {
         // Map op de sha zoals die in de todo staat (meestal verkort).
@@ -88,7 +88,7 @@ export class GitService {
       for (const sha of shas) {
         try {
           const record = parseCommitRecords(await git(
-            ['show', '--no-patch', `--format=${COMMIT_FORMAT}`, sha], this.repoRoot,
+            ['show', '--no-patch', `--format=${COMMIT_FORMAT}`, '--end-of-options', sha], this.repoRoot,
           ))[0];
           if (record) out.set(sha, { ...record, files: [] });
         } catch { /* rij toont dan alleen de todo-regel */ }
@@ -104,8 +104,8 @@ export class GitService {
 
     const [meta, numstatOut, nameStatusOut] = await Promise.all([
       this.commitMeta([sha]),
-      git(['show', '--format=', '--numstat', '-z', '-M', sha], this.repoRoot),
-      git(['show', '--format=', '--name-status', '-z', '-M', sha], this.repoRoot),
+      git(['show', '--format=', '--numstat', '-z', '-M', '--end-of-options', sha], this.repoRoot),
+      git(['show', '--format=', '--name-status', '-z', '-M', '--end-of-options', sha], this.repoRoot),
     ]);
     const details = meta.get(sha);
     if (!details) throw new Error(`commit ${sha} not found`);
@@ -119,7 +119,7 @@ export class GitService {
    * kanten (added files, root commits). */
   async fileAt(rev: string, filePath: string): Promise<string> {
     try {
-      return await git(['show', `${rev}:${filePath}`], this.repoRoot);
+      return await git(['show', '--end-of-options', `${rev}:${filePath}`], this.repoRoot);
     } catch {
       return '';
     }
