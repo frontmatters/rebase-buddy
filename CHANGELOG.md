@@ -45,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Accessibility: listbox/option semantics with selection state, menu roles,
   and visible focus indicators on all interactive elements.
 - Reduced motion preference is respected.
+- Explanatory tooltips on every control, including the full keyboard map
+  behind the status bar hints and clear Start/Abort consequences.
 
 ### Fixed
 

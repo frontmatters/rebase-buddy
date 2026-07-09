@@ -214,7 +214,9 @@ function render(): void {
 function topbar(): HTMLElement {
   const actionCount = entries.filter((e) => e.kind === 'action').length;
 
-  const info = el('span', 'topbar__info', el('code', undefined, repo?.branch ?? 'HEAD'));
+  const branchCode = el('code', undefined, repo?.branch ?? 'HEAD');
+  branchCode.title = 'The branch being rebased';
+  const info = el('span', 'topbar__info', branchCode);
   if (repo?.onto) {
     const onto = el('span', 'topbar__onto', 'onto ', el('code', undefined, repo.onto));
     onto.title = repo.ontoSubject ?? '';
@@ -224,6 +226,9 @@ function topbar(): HTMLElement {
 
   const abortBtn = el('button', `btn btn--ghost${abortArmed ? ' btn--danger' : ''}`,
     abortArmed ? 'Confirm abort' : 'Abort');
+  abortBtn.title = abortArmed
+    ? 'Click again to confirm: the rebase is cancelled and nothing changes'
+    : 'Cancel the rebase; your branch stays exactly as it was';
   abortBtn.addEventListener('click', () => {
     if (abortArmed || !confirmAbort) {
       post({ type: 'abort' });
@@ -236,6 +241,7 @@ function topbar(): HTMLElement {
   });
 
   const startBtn = el('button', 'btn btn--primary', 'Start rebase');
+  startBtn.title = 'Apply this plan: git rebases the commits top to bottom (oldest first)';
   const invalidAt = firstInvalidMeld();
   if (invalidAt >= 0) {
     startBtn.disabled = true;
@@ -263,10 +269,10 @@ function panes(): HTMLElement {
     render();
   });
 
+  const headLabel = el('span', undefined, newestFirst ? 'applied bottom to top' : 'applied top to bottom');
+  headLabel.title = 'The direction in which git will apply these commits during the rebase';
   const list = el('section', `list${newestFirst ? ' list--newest' : ''}`,
-    el('div', 'list__head',
-      el('span', undefined, newestFirst ? 'applied bottom to top' : 'applied top to bottom'),
-      orderBtn));
+    el('div', 'list__head', headLabel, orderBtn));
   list.setAttribute('role', 'listbox');
   list.setAttribute('aria-label', 'Rebase todo list');
   const order = entries.map((_, i) => i);
@@ -322,6 +328,7 @@ function splitter(): HTMLElement {
 
 function row(entry: TodoEntry, i: number): HTMLElement {
   const grip = el('span', 'row__grip');
+  grip.title = 'Drag to reorder';
   grip.append(svgIcon(GRIP_D));
 
   let node: HTMLElement;
@@ -457,8 +464,9 @@ function detailsChildren(): Node[] {
     }, 1500);
   });
 
-  const header = el('div', 'details__header',
-    el('span', `chip chip--${entry.action}`, entry.action), shaCode, copyBtn);
+  const chip = el('span', `chip chip--${entry.action}`, entry.action);
+  chip.title = ACTION_HINTS[entry.action];
+  const header = el('div', 'details__header', chip, shaCode, copyBtn);
 
   if (repo?.commitUrlBase) {
     const linkBtn = el('button', 'iconbtn');
@@ -519,7 +527,9 @@ function fileRow(sha: string, f: FileChange): HTMLElement {
 
 function statusbar(): HTMLElement {
   const keys = el('span', 'statusbar__keys');
-  const parts: Array<[string, string]> = [['↑↓', 'select'], ['⌥↑↓', 'move'], ['P R E S F D', 'action']];
+  keys.title = 'Keyboard shortcuts — ↑↓: select commit · ⌥↑↓: move commit · '
+    + 'P: pick · R: reword · E: edit · S: squash · F: fixup · D: drop (sets the action of the selected commit)';
+  const parts: Array<[string, string]> = [['↑↓', 'select'], ['⌥↑↓', 'move'], ['P R E S F D', 'set action']];
   parts.forEach(([key, label], i) => {
     if (i > 0) keys.append(' · ');
     keys.append(el('kbd', undefined, key), ` ${label}`);
