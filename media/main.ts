@@ -381,7 +381,15 @@ function row(entry: TodoEntry, i: number): HTMLElement {
   node.setAttribute('aria-selected', String(i === selected));
   node.dataset.i = String(i);
   node.draggable = true;
-  node.addEventListener('click', () => select(i));
+  node.addEventListener('click', () => {
+    // Een klik op een commit is een expliciete details-intentie: heropen het
+    // paneel als het dicht was (pijltjes-navigatie doet dat bewust niet).
+    if (!detailsOpen) {
+      detailsOpen = true;
+      saveState();
+    }
+    select(i);
+  });
   node.addEventListener('dragstart', (e) => {
     dragFrom = i;
     e.dataTransfer?.setData('text/plain', String(i));
