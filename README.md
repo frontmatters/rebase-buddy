@@ -1,8 +1,8 @@
-# Rebaser
+# Rebase Buddy
 
 Interactive rebase editor with commit details for VS Code — free and minimal.
 
-![Rebaser in dark mode](docs/media/screenshot-dark.png)
+![Rebase Buddy in dark mode](docs/media/screenshot-dark.png)
 Registers a custom editor for git's `git-rebase-todo` file: run `git rebase -i`
 and reorder commits with drag & drop, change actions inline (pick, reword,
 edit, squash, fixup, drop), and inspect every commit's changed files with
@@ -14,13 +14,13 @@ git's own todo file, nothing more.
 ```sh
 npm install
 npm run build
-npm run package        # produces rebaser-<version>.vsix
-code --install-extension rebaser-*.vsix
+npm run package        # produces rebase-buddy-<version>.vsix
+code --install-extension rebase-buddy-*.vsix
 ```
 
 ## Use
 
-1. Run **Rebaser: Enable as Git rebase editor** from the command palette
+1. Run **Rebase Buddy: Enable as Git rebase editor** from the command palette
    (sets `git config --global sequence.editor` to this VS Code install,
    remembering any previous value).
 2. Run `git rebase -i <ref>` from any terminal.
@@ -29,7 +29,7 @@ code --install-extension rebaser-*.vsix
 
 Keyboard: `↑↓` select · `⌥↑↓` move · `P R E S F D` set action.
 
-**Rebaser: Disable** restores your previous `sequence.editor`.
+**Rebase Buddy: Disable** restores your previous `sequence.editor`.
 
 ## Development
 

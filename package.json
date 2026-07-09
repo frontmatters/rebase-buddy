@@ -1,6 +1,6 @@
 {
-  "name": "rebaser",
-  "displayName": "Rebaser",
+  "name": "rebase-buddy",
+  "displayName": "Rebase Buddy",
   "description": "Interactive rebase editor with commit details — free and minimal",
   "version": "0.1.0",
   "publisher": "frontmatters",
@@ -38,7 +38,7 @@
     "customEditors": [
       {
         "viewType": "rebaser.editor",
-        "displayName": "Rebaser",
+        "displayName": "Rebase Buddy",
         "selector": [
           {
             "filenamePattern": "**/rebase-merge/git-rebase-todo"
@@ -50,11 +50,11 @@
     "commands": [
       {
         "command": "rebaser.enable",
-        "title": "Rebaser: Enable as Git rebase editor"
+        "title": "Rebase Buddy: Enable as Git rebase editor"
       },
       {
         "command": "rebaser.disable",
-        "title": "Rebaser: Disable (restore previous rebase editor)"
+        "title": "Rebase Buddy: Disable (restore previous rebase editor)"
       }
     ]
   },
