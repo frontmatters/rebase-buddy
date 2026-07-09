@@ -665,6 +665,7 @@ function statusbar(): HTMLElement {
 // ---------- state-mutaties ----------
 
 function select(i: number): void {
+  if (editingIndex !== null && editingIndex !== i) editingIndex = null;
   selected = i;
   const entry = entries[i];
   if (entry?.kind === 'action' && !details.get(entry.sha)?.files.length) {

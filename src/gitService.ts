@@ -74,6 +74,9 @@ export class GitService {
    * Die map leeft precies zo lang als de rebase (git ruimt 'm op bij
    * afronden én abort) en overleeft conflict-pauzes. */
   messageFilePath(filename: string): string {
+    if (!/^rb-msg-[0-9a-f]{4,40}-\d+$/.test(filename)) {
+      throw new Error(`unsafe message filename: ${filename}`);
+    }
     return path.join(this.rebaseDir, filename);
   }
 

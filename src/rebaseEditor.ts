@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { lstatSync, readFileSync } from 'node:fs';
 import { rm, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
@@ -74,9 +74,17 @@ export class RebaseEditorProvider implements vscode.CustomTextEditorProvider {
       return occ;
     };
 
+    const isRegularFile = (p: string): boolean => {
+      try {
+        return lstatSync(p).isFile(); // lstat: symlinks tellen niet mee
+      } catch {
+        return false;
+      }
+    };
+
     const isKnownFile = (filename: string): boolean =>
       Array.from(edits.values()).some((e) => e.filename === filename)
-      || existsSync(service.messageFilePath(filename));
+      || isRegularFile(service.messageFilePath(filename));
 
     /** Parse + vouw eigen exec-regels terug + hydrateer editedMessage-tekst. */
     const parseFolded = (): TodoEntry[] => {
@@ -87,7 +95,16 @@ export class RebaseEditorProvider implements vscode.CustomTextEditorProvider {
         const occ = seen.get(e.sha) ?? 0;
         seen.set(e.sha, occ + 1);
         if (e.editedMessage !== undefined) {
-          e.editedMessage = edits.get(`${e.sha}#${occ}`)?.text ?? '';
+          let text = edits.get(`${e.sha}#${occ}`)?.text;
+          if (text === undefined) {
+            // Sessie-herstel: bestand bestaat nog, map is leeg — lees terug.
+            try {
+              const filename = `rb-msg-${e.sha.toLowerCase()}-${occ}`;
+              text = readFileSync(service.messageFilePath(filename), 'utf8').trim();
+              edits.set(`${e.sha}#${occ}`, { filename, text });
+            } catch { text = ''; }
+          }
+          e.editedMessage = text;
         }
       }
       return folded;
@@ -182,6 +199,9 @@ export class RebaseEditorProvider implements vscode.CustomTextEditorProvider {
             if (entry.action === 'fixup' || entry.action === 'drop') break;
             const occ = occurrenceOf(list, msg.index);
             const filename = `rb-msg-${entry.sha.toLowerCase()}-${occ}`;
+            // rm vóór write: een door een kwaadaardige repo klaargezette
+            // symlink kan zo nooit een schrijf-doel buiten rebase-merge worden.
+            await rm(service.messageFilePath(filename), { force: true });
             await writeFile(service.messageFilePath(filename), `${text}\n`, { mode: 0o600 });
             edits.set(`${entry.sha}#${occ}`, { filename, text });
             entry.editedMessage = text;
