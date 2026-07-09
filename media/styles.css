@@ -231,7 +231,7 @@ body.is-resizing {
 
 .row {
   display: grid;
-  grid-template-columns: 22px 14px 84px 64px minmax(0, 1fr) auto;
+  grid-template-columns: 22px 14px 84px 60px 18px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   height: 34px;
@@ -302,6 +302,41 @@ body.is-resizing {
 .row--dropped .row__meta { opacity: 0.5; }
 
 .row__sha { color: var(--vscode-descriptionForeground); }
+
+.row__copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 2px;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0;
+  cursor: pointer;
+}
+
+.row:hover .row__copy,
+.row__copy:focus-visible {
+  opacity: 1;
+}
+
+.row__copy:hover {
+  color: var(--vscode-foreground);
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.15));
+}
+
+.row__copy:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.row__copy--done {
+  color: var(--r-add);
+  opacity: 1;
+}
 
 .row__subject {
   white-space: nowrap;

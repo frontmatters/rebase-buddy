@@ -103,6 +103,7 @@ const COPY_D = 'M5 2h8l1 1v8h-1V3H5V2zM3 5h8l1 1v8l-1 1H3l-1-1V6l1-1zm0 1v8h8V6H
 const LINK_D = 'M9 2h5v5h-1V3.7L7.85 8.85l-.7-.7L12.3 3H9V2zM3.5 4H7v1H4v8h8V9h1v4.5l-.5.5h-9l-.5-.5v-9l.5-.5z';
 const TERMINAL_D = 'M2.5 3h11l.5.5v9l-.5.5h-11l-.5-.5v-9l.5-.5zM3 12h10V4H3v8zm2.3-6.3l2 2v.6l-2 2-.6-.6L6.4 8 4.7 6.3l.6-.6zM8 10h3v1H8v-1z';
 const CHEV_D = 'M3.9 5.7l.7-.7L8 8.4l3.4-3.4.7.7L8 9.8 3.9 5.7z';
+const CHECK_D = 'M13.5 4.6l-7 7-3.6-3.6.7-.7 2.9 2.9 6.3-6.3.7.7z';
 
 function post(msg: FromWebview): void {
   vscode.postMessage(msg);
@@ -324,12 +325,27 @@ function row(entry: TodoEntry, i: number): HTMLElement {
       openActionMenu(i, anchor);
     });
 
+    const copyBtn = el('button', 'row__copy');
+    copyBtn.title = 'Copy full commit id';
+    copyBtn.append(svgIcon(COPY_D, 11));
+    copyBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      post({ type: 'copySha', sha: entry.sha });
+      copyBtn.replaceChildren(svgIcon(CHECK_D, 11));
+      copyBtn.classList.add('row__copy--done');
+      setTimeout(() => {
+        copyBtn.replaceChildren(svgIcon(COPY_D, 11));
+        copyBtn.classList.remove('row__copy--done');
+      }, 1200);
+    });
+
     node = el('div',
       `row row--action${joined ? ' row--joined' : ''}${dropped ? ' row--dropped' : ''}`,
       grip,
       el('span', 'row__connector'),
       actionBtn,
       el('code', 'row__sha', entry.sha.slice(0, 7)),
+      copyBtn,
       el('span', 'row__subject', meta?.subject ?? entry.subject),
       el('span', 'row__meta', meta ? `${meta.author} · ${relativeDate(meta.date)}` : ''),
     );

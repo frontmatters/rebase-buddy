@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   non-dropped commit exists, and if reordering creates an invalid meld the
   row is flagged and Start rebase is blocked with an explanation, instead of
   letting git fail mid-rebase.
+- Hover copy button next to each commit hash in the list, copying the full
+  commit id with inline confirmation.
 
 ### Changed
 
