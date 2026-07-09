@@ -265,7 +265,7 @@ body.is-resizing {
 
 .row {
   display: grid;
-  grid-template-columns: 22px 14px 84px 56px 18px minmax(0, 1fr) auto;
+  grid-template-columns: 22px 14px 84px 60px 16px minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px;
   height: 34px;
@@ -335,7 +335,10 @@ body.is-resizing {
 .row--dropped .row__sha,
 .row--dropped .row__meta { opacity: 0.5; }
 
-.row__sha { color: var(--vscode-descriptionForeground); }
+.row__sha {
+  color: var(--vscode-descriptionForeground);
+  padding-left: 4px;
+}
 
 .row__copy {
   display: inline-flex;
