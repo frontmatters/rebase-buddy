@@ -145,9 +145,10 @@ export class RebaseEditorProvider implements vscode.CustomTextEditorProvider {
         post({
           type: 'init', entries: parsed.entries, repo,
           prefs: {
-            defaultOrder: cfg.get('defaultOrder', 'oldest-first'),
+            defaultOrder: cfg.get('defaultOrder', 'newest-first'),
             detailsWidth: cfg.get('detailsWidth', 340),
             confirmAbort: cfg.get('confirmAbort', true),
+            showBaseCommit: cfg.get('showBaseCommit', true),
           },
         });
       } else {

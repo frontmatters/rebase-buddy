@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Base commit row: the commit your changes are applied onto is shown greyed
+  out and read-only, next to the oldest commit (bottom in newest-first, top in
+  oldest-first), like GitLens. Toggle with `rebaseBuddy.showBaseCommit`.
+
+### Changed
+
+- The default display order is now newest first (`rebaseBuddy.defaultOrder`).
+
 ## [0.5.0] - 2026-07-09
 
 ### Added

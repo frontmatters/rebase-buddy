@@ -70,7 +70,7 @@
             "Git's todo order: the rebase applies top to bottom.",
             "Log order: newest commit on top."
           ],
-          "default": "oldest-first",
+          "default": "newest-first",
           "description": "Default display order of the commit list when a rebase editor opens. The in-editor toggle overrides this for the session."
         },
         "rebaseBuddy.detailsWidth": {
@@ -84,6 +84,11 @@
           "type": "boolean",
           "default": true,
           "description": "Require a second click to confirm Abort."
+        },
+        "rebaseBuddy.showBaseCommit": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the base commit your changes are applied on top of, greyed out and read-only."
         }
       }
     }

@@ -40,6 +40,7 @@ let detailsW = vscode.getState?.()?.detailsW ?? 340;
 let newestFirst = vscode.getState?.()?.newestFirst ?? false;
 let detailsOpen = vscode.getState?.()?.detailsOpen ?? true;
 let confirmAbort = true;
+let showBaseCommit = true;
 let editingIndex: number | null = null;
 const details = new Map<string, CommitDetails>();
 const detailErrors = new Map<string, string>();
@@ -334,7 +335,11 @@ function panes(): HTMLElement {
   list.setAttribute('aria-label', 'Rebase todo list');
   const order = entries.map((_, i) => i);
   if (newestFirst) order.reverse();
+  const base = showBaseCommit && repo?.onto ? baseRow() : null;
+  // Newest-first: basis onderaan (fundament); oldest-first: basis bovenaan.
+  if (base && !newestFirst) list.append(base);
   for (const i of order) list.append(row(entries[i], i));
+  if (base && newestFirst) list.append(base);
   list.addEventListener('scroll', closeMenu);
 
   if (!detailsOpen) {
@@ -381,6 +386,19 @@ function splitter(): HTMLElement {
     document.addEventListener('mouseup', onUp);
   });
   return bar;
+}
+
+function baseRow(): HTMLElement {
+  const node = el('div', 'row row--base',
+    el('span', 'row__grip'),
+    el('span', 'row__base-tag', 'base'),
+    el('code', 'row__sha', (repo?.onto ?? '').slice(0, 7)),
+    el('span'),
+    el('span', 'row__subject', repo?.ontoSubject ?? ''),
+    el('span', 'row__meta', 'your changes land on top'),
+  );
+  node.title = 'The commit your rebase is applied onto (read-only)';
+  return node;
 }
 
 function row(entry: TodoEntry, i: number): HTMLElement {
@@ -751,23 +769,50 @@ function setAction(i: number, action: TodoAction): void {
   sync();
 }
 
-/** Verplaatst de gegeven canonieke indices als één aaneengesloten blok naar
- * insertAt (pre-verwijdering coördinaten); onderlinge volgorde blijft. */
-function moveBlock(indices: number[], insertAt: number): void {
-  const sorted = Array.from(new Set(indices)).sort((a, b) => a - b);
-  const moving = sorted.map((i) => entries[i]);
-  for (let k = sorted.length - 1; k >= 0; k--) entries.splice(sorted[k], 1);
-  const removedBefore = sorted.filter((i) => i < insertAt).length;
-  const at = Math.max(0, Math.min(entries.length, insertAt - removedBefore));
-  entries.splice(at, 0, ...moving);
-  selectedSet = new Set(moving.map((_, k) => at + k));
-  selected = at;
-  lead = at + moving.length - 1;
+/** Commit een gewenste VIEW-volgorde (objecten, boven→onder) naar entries.
+ * entries is altijd canoniek (oldest-first), dus bij newest-first draaien we
+ * de view om. Selectie en anchor volgen de verplaatste objecten by identity. */
+function commitView(viewObjs: TodoEntry[], movedObjs: TodoEntry[]): void {
+  entries = newestFirst ? viewObjs.slice().reverse() : viewObjs.slice();
+  selectedSet = new Set(movedObjs.map((o) => entries.indexOf(o)));
+  selected = entries.indexOf(movedObjs[0]);
+  lead = entries.indexOf(movedObjs[movedObjs.length - 1]);
   sync();
+}
+
+/** Sleep-drop: verplaats de canonieke indices als blok, ingevoegd VÓÓR de
+ * doelrij in weergave-volgorde (waar de dropline staat). */
+function moveBlock(indices: number[], targetCanonical: number): void {
+  const moveSet = new Set(indices.map((ci) => entries[ci]));
+  const viewObjs = viewOrder().map((ci) => entries[ci]);
+  const moving = viewObjs.filter((o) => moveSet.has(o));
+  const target = entries[targetCanonical];
+  const rest = viewObjs.filter((o) => !moveSet.has(o));
+  let pos = rest.indexOf(target);
+  if (pos < 0) pos = rest.length;
+  rest.splice(pos, 0, ...moving);
+  commitView(rest, moving);
 }
 
 function move(from: number, to: number): void {
   moveBlock([from], to);
+}
+
+/** ⌥↑/⌥↓: schuif de selectie één plek op in WEERGAVE-richting. */
+function nudge(dir: -1 | 1): void {
+  const viewObjs = viewOrder().map((ci) => entries[ci]);
+  const moveSet = new Set(
+    (selectedSet.size > 1 ? Array.from(selectedSet) : [selected]).map((ci) => entries[ci]),
+  );
+  const moving = viewObjs.filter((o) => moveSet.has(o));
+  if (moving.length === 0) return;
+  const rest = viewObjs.filter((o) => !moveSet.has(o));
+  const firstPos = viewObjs.indexOf(moving[0]);
+  const before = rest.filter((o) => viewObjs.indexOf(o) < firstPos).length;
+  const insertAt = dir < 0 ? before - 1 : before + 1;
+  if (insertAt < 0 || insertAt > rest.length) return; // aan de rand
+  rest.splice(insertAt, 0, ...moving);
+  commitView(rest, moving);
 }
 
 function sync(): void {
@@ -796,12 +841,8 @@ document.addEventListener('keydown', (e) => {
     const delta = (e.key === 'ArrowUp' ? -1 : 1) * (newestFirst ? -1 : 1);
     e.preventDefault();
     if (e.altKey && selected >= 0) {
-      const block = selectedSet.size > 1 ? Array.from(selectedSet).sort((a, b) => a - b) : [selected];
-      const lo = block[0];
-      const hi = block[block.length - 1];
-      if (delta < 0 ? lo > 0 : hi < entries.length - 1) {
-        moveBlock(block, delta < 0 ? lo - 1 : hi + 2);
-      }
+      // Verplaats in WEERGAVE-richting; nudge() rekent zelf naar canoniek.
+      nudge(e.key === 'ArrowUp' ? -1 : 1);
     } else if (e.shiftKey && lead >= 0) {
       const next = Math.min(Math.max(lead + delta, 0), entries.length - 1);
       rangeSelect(next);
@@ -825,6 +866,7 @@ window.addEventListener('message', (event: MessageEvent<ToWebview>) => {
       // Settings gelden als default; sessie-state (toggle/splitter) wint.
       const state = vscode.getState?.();
       confirmAbort = msg.prefs.confirmAbort;
+      showBaseCommit = msg.prefs.showBaseCommit;
       if (state?.newestFirst === undefined) {
         newestFirst = msg.prefs.defaultOrder === 'newest-first';
       }
