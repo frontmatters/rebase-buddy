@@ -3,7 +3,7 @@
 // mutatie gaat als volledige entry-lijst terug naar de extension host.
 
 import type {
-  CommitDetails, FileChange, FromWebview, RepoInfo, ToWebview, TodoAction, TodoEntry,
+  ActionEntry, CommitDetails, FileChange, FromWebview, RepoInfo, ToWebview, TodoAction, TodoEntry,
 } from '../src/shared/messages';
 
 interface ViewState { detailsW?: number; newestFirst?: boolean; detailsOpen?: boolean }
@@ -38,6 +38,7 @@ let detailsW = vscode.getState?.()?.detailsW ?? 340;
 let newestFirst = vscode.getState?.()?.newestFirst ?? false;
 let detailsOpen = vscode.getState?.()?.detailsOpen ?? true;
 let confirmAbort = true;
+let editingIndex: number | null = null;
 const details = new Map<string, CommitDetails>();
 const detailErrors = new Map<string, string>();
 
@@ -49,6 +50,25 @@ function toggleDetails(open: boolean): void {
   detailsOpen = open;
   saveState();
   render();
+}
+
+function canEditMessage(entry: TodoEntry | undefined): entry is ActionEntry {
+  return entry?.kind === 'action' && entry.action !== 'fixup' && entry.action !== 'drop';
+}
+
+function startEdit(index: number): void {
+  const entry = entries[index];
+  if (!canEditMessage(entry)) return;
+  if (!detailsOpen) {
+    detailsOpen = true;
+    saveState();
+  }
+  selected = index;
+  editingIndex = index;
+  render();
+  const area = document.querySelector<HTMLTextAreaElement>('.msgedit__area');
+  area?.focus();
+  area?.setSelectionRange(0, 0);
 }
 
 /* Squash/fixup smelt in de vorige commit (in todo-volgorde); drops vallen
@@ -113,6 +133,8 @@ const TERMINAL_D = 'M2.5 3h11l.5.5v9l-.5.5h-11l-.5-.5v-9l.5-.5zM3 12h10V4H3v8zm2
 const CHEV_D = 'M3.9 5.7l.7-.7L8 8.4l3.4-3.4.7.7L8 9.8 3.9 5.7z';
 const CHECK_D = 'M13.5 4.6l-7 7-3.6-3.6.7-.7 2.9 2.9 6.3-6.3.7.7z';
 const CLOSE_D = 'M4.3 3.6L8 7.3l3.7-3.7.7.7L8.7 8l3.7 3.7-.7.7L8 8.7l-3.7 3.7-.7-.7L7.3 8 3.6 4.3l.7-.7z';
+const PENCIL_D = 'M11.7 1.9l2.4 2.4-1.1 1.1-2.4-2.4 1.1-1.1zM9.9 3.7l2.4 2.4-7.1 7.1-3.2.8.8-3.2 7.1-7.1z';
+const UNDO_D = 'M6.4 3.2L3 6.6l3.4 3.4.7-.7-2.2-2.2H9a3.5 3.5 0 010 7H6.5v1H9a4.5 4.5 0 000-9H4.9l2.2-2.2-.7-.7z';
 
 function post(msg: FromWebview): void {
   vscode.postMessage(msg);
@@ -371,6 +393,19 @@ function row(entry: TodoEntry, i: number): HTMLElement {
       }, 1200);
     });
 
+    const edited = entry.editedMessage !== undefined;
+    const subjectText = edited
+      ? entry.editedMessage!.split('\n')[0]
+      : (meta?.subject ?? entry.subject);
+    const subjectEl = el('span', `row__subject${edited ? ' row__subject--edited' : ''}`, subjectText);
+    if (edited) subjectEl.title = 'Message edited: rewritten during the rebase';
+    if (canEditMessage(entry)) {
+      subjectEl.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        startEdit(i);
+      });
+    }
+
     node = el('div',
       `row row--action${joined ? ' row--joined' : ''}${dropped ? ' row--dropped' : ''}`,
       grip,
@@ -378,7 +413,7 @@ function row(entry: TodoEntry, i: number): HTMLElement {
       actionBtn,
       el('code', 'row__sha', entry.sha.slice(0, 7)),
       copyBtn,
-      el('span', 'row__subject', meta?.subject ?? entry.subject),
+      subjectEl,
       el('span', 'row__meta', meta ? `${meta.author} · ${relativeDate(meta.date)}` : ''),
     );
   }
@@ -476,12 +511,46 @@ function detailsChildren(): Node[] {
     header.append(linkBtn);
   }
 
-  const nodes: Node[] = [
-    header,
-    el('h2', 'details__subject', meta.subject),
-    el('div', 'details__byline', `${meta.author} <${meta.email}> · ${dateFmt}`),
-  ];
-  if (meta.body) nodes.push(el('pre', 'details__body', meta.body));
+  const edited = entry.editedMessage !== undefined;
+  if (edited) {
+    const editedChip = el('span', 'chip chip--edited', 'edited');
+    editedChip.title = 'The commit message will be rewritten during the rebase';
+    const undoBtn = el('button', 'iconbtn');
+    undoBtn.title = 'Revert to the original commit message';
+    undoBtn.append(svgIcon(UNDO_D, 13));
+    undoBtn.addEventListener('click', () => post({ type: 'revertMessage', index: selected }));
+    header.append(editedChip, undoBtn);
+  }
+
+  const nodes: Node[] = [header];
+
+  if (editingIndex === selected && canEditMessage(entry)) {
+    nodes.push(messageEditor(entry, meta));
+  } else {
+    const shown = entry.editedMessage ?? '';
+    const [subjectText, ...bodyParts] = edited ? shown.split('\n') : [meta.subject];
+    const bodyText = edited ? bodyParts.join('\n').trim() : (meta.body ?? '');
+
+    const subjectRow = el('div', 'details__subjectrow');
+    const subject = el('h2', `details__subject${edited ? ' details__subject--edited' : ''}`, subjectText || meta.subject);
+    subjectRow.append(subject);
+    if (canEditMessage(entry)) {
+      subject.title = 'Double-click to edit the commit message';
+      subject.addEventListener('dblclick', () => startEdit(selected));
+      const pencil = el('button', 'iconbtn details__pencil');
+      pencil.title = 'Edit the commit message (rewords during the rebase)';
+      pencil.append(svgIcon(PENCIL_D, 12));
+      pencil.addEventListener('click', () => startEdit(selected));
+      subjectRow.append(pencil);
+    }
+    nodes.push(subjectRow,
+      el('div', 'details__byline', `${meta.author} <${meta.email}> · ${dateFmt}`));
+    if (bodyText) {
+      const body = el('pre', 'details__body', bodyText);
+      if (canEditMessage(entry)) body.addEventListener('dblclick', () => startEdit(selected));
+      nodes.push(body);
+    }
+  }
 
   const totals = meta.files.reduce(
     (acc, f) => ({ a: acc.a + (f.added ?? 0), d: acc.d + (f.deleted ?? 0) }), { a: 0, d: 0 });
@@ -500,6 +569,51 @@ function detailsChildren(): Node[] {
   }
   nodes.push(fileList);
   return nodes;
+}
+
+function messageEditor(entry: ActionEntry, meta: CommitDetails): HTMLElement {
+  const initial = entry.editedMessage
+    ?? (meta.body ? `${meta.subject}\n\n${meta.body}` : meta.subject);
+
+  const area = el('textarea', 'msgedit__area') as HTMLTextAreaElement;
+  area.value = initial;
+  area.rows = Math.min(12, Math.max(4, initial.split('\n').length + 1));
+  area.spellcheck = false;
+
+  const confirm = () => {
+    const text = area.value.trim();
+    if (!text) return;
+    editingIndex = null;
+    post({ type: 'editMessage', index: selected, message: text });
+  };
+  const cancel = () => {
+    editingIndex = null;
+    render();
+  };
+
+  area.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      confirm();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancel();
+    }
+  });
+
+  const saveBtn = el('button', 'btn btn--primary msgedit__btn', 'Save message');
+  saveBtn.title = 'Rewrite the commit message during the rebase (⌘⏎)';
+  saveBtn.addEventListener('click', confirm);
+  const cancelBtn = el('button', 'btn btn--ghost msgedit__btn', 'Cancel');
+  cancelBtn.title = 'Keep the current message (Esc)';
+  cancelBtn.addEventListener('click', cancel);
+
+  return el('div', 'msgedit',
+    area,
+    el('div', 'msgedit__actions',
+      el('span', 'msgedit__hint', 'first line is the subject'),
+      cancelBtn, saveBtn),
+  );
 }
 
 function fileRow(sha: string, f: FileChange): HTMLElement {
@@ -578,6 +692,7 @@ function sync(): void {
 
 document.addEventListener('keydown', (e) => {
   if (menuEl) return; // het open menu handelt zijn eigen toetsen af
+  if (e.target instanceof HTMLTextAreaElement) return; // message-editor actief
   const action = ACTION_KEYS[e.key.toLowerCase()];
 
   if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -618,6 +733,7 @@ window.addEventListener('message', (event: MessageEvent<ToWebview>) => {
     case 'entries':
       entries = msg.entries;
       if (selected >= entries.length) selected = entries.length - 1;
+      editingIndex = null;
       render();
       break;
     case 'details':

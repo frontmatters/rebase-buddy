@@ -625,6 +625,67 @@ body.is-resizing {
   color: var(--vscode-descriptionForeground);
 }
 
+/* ---------- message-editor ---------- */
+
+.details__subjectrow {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.details__subjectrow .details__pencil {
+  opacity: 0;
+  flex: none;
+  margin-top: 1px;
+}
+
+.details__subjectrow:hover .details__pencil,
+.details__pencil:focus-visible {
+  opacity: 1;
+}
+
+.details__subject--edited,
+.row__subject--edited {
+  color: var(--r-reword);
+}
+
+.chip--edited {
+  color: var(--r-reword);
+  border-color: var(--r-reword);
+}
+
+.msgedit {
+  margin: 6px 0 14px;
+}
+
+.msgedit__area {
+  width: 100%;
+  padding: 8px 10px;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--vscode-input-foreground, var(--vscode-foreground));
+  background: var(--vscode-input-background, transparent);
+  border: 1px solid var(--vscode-focusBorder);
+  border-radius: 2px;
+  resize: vertical;
+}
+
+.msgedit__area:focus { outline: none; }
+
+.msgedit__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.msgedit__hint {
+  flex: 1;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
 .file {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) auto;

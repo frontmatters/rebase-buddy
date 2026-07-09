@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (0.3.0 branch: feat/message-edit)
+
+- Inline commit message editing: double-click the message in the details
+  panel (or the subject in the list, or use the pencil icon) to rewrite a
+  commit message during the rebase, without the COMMIT_EDITMSG editor stop.
+  Implemented as `pick` plus a host-constructed
+  `exec git commit --amend -F <file>` line; message files live inside
+  git-managed `rebase-merge/` (auto-cleanup on finish and abort, survives
+  conflict pauses, worktree-safe via `--git-path`). Editing a `reword` row
+  converts it to the inline flow; fixup/drop rows are excluded. Edited rows
+  show reword styling, an edited chip and one-click revert.
+
 ### Added
 
 - Resizable panel split: drag the divider between the commit list and the
