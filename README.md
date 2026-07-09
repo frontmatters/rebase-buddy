@@ -1,6 +1,8 @@
 # Rebaser
 
 Interactive rebase editor with commit details for VS Code — free and minimal.
+
+![Rebaser in dark mode](docs/media/screenshot-dark.png)
 Registers a custom editor for git's `git-rebase-todo` file: run `git rebase -i`
 and reorder commits with drag & drop, change actions inline (pick, reword,
 edit, squash, fixup, drop), and inspect every commit's changed files with
