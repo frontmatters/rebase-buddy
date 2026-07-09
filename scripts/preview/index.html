@@ -72,7 +72,7 @@
   function meta(sha, subject, body, hoursAgo, files) {
     return {
       sha: sha + '0000000000000000000000000000000000'.slice(sha.length - 6),
-      shortSha: sha, author: 'user1', email: 'm@example.com',
+      shortSha: sha, author: sha.charCodeAt(0) % 2 ? 'user1' : 'user2', email: 'hello@frontmatters.dev',
       date: iso(hoursAgo), subject: subject, body: body, parents: ['aaaaaaa'], files: files
     };
   }

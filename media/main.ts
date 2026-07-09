@@ -117,7 +117,7 @@ function topbar(): HTMLElement {
   startBtn.addEventListener('click', () => post({ type: 'start' }));
 
   return el('header', 'topbar',
-    el('span', 'topbar__brand', 'Rebaser'),
+    el('span', 'topbar__brand', 'Rebase Buddy'),
     info,
     el('span', 'topbar__spacer'),
     abortBtn,
