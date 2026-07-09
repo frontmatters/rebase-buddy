@@ -703,7 +703,7 @@ function fileRow(sha: string, f: FileChange): HTMLElement {
 
 function statusbar(): HTMLElement {
   const keys = el('span', 'statusbar__keys');
-  keys.title = 'Keyboard shortcuts — ↑↓: select · ⇧↑↓ / ⇧-click: range · ⌘-click: toggle · '
+  keys.title = 'Keyboard shortcuts — ↑↓: select · ⇧↑↓ / ⇧-click: range · ⌘-click: toggle · ⌘A: select all · '
     + '⌥↑↓: move selection · P: pick · R: reword · E: edit · S: squash · F: fixup · D: drop '
     + '(applies to every selected commit)';
   const parts: Array<[string, string]> = [['↑↓', 'select'], ['⇧/⌘', 'multi'], ['⌥↑↓', 'move'], ['P R E S F D', 'set action']];
@@ -779,6 +779,17 @@ document.addEventListener('keydown', (e) => {
   if (menuEl) return; // het open menu handelt zijn eigen toetsen af
   if (e.target instanceof HTMLTextAreaElement) return; // message-editor actief
   const action = ACTION_KEYS[e.key.toLowerCase()];
+
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') {
+    e.preventDefault();
+    if (entries.length > 0) {
+      selectedSet = new Set(entries.map((_, i) => i));
+      if (selected < 0) selected = 0;
+      lead = entries.length - 1;
+      render();
+    }
+    return;
+  }
 
   if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
     // Pijltjes werken in beeld-volgorde; bij newest-first is canoniek omgekeerd.
