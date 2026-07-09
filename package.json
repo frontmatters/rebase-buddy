@@ -1,0 +1,53 @@
+{
+  "name": "rebaser",
+  "displayName": "Rebaser",
+  "description": "Interactive rebase editor with commit details — free and minimal",
+  "version": "0.1.0",
+  "publisher": "cartmedia",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "SCM Providers"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "rebaser.editor",
+        "displayName": "Rebaser",
+        "selector": [
+          {
+            "filenamePattern": "**/rebase-merge/git-rebase-todo"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "rebaser.enable",
+        "title": "Rebaser: Enable as Git rebase editor"
+      },
+      {
+        "command": "rebaser.disable",
+        "title": "Rebaser: Disable (restore previous rebase editor)"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "test": "vitest run",
+    "package": "npx @vscode/vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.21.5",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
