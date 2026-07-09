@@ -27,6 +27,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `rebaseBuddy.detailsWidth` (initial panel width) and
   `rebaseBuddy.confirmAbort` (two-step abort toggle). In-editor changes
   override the defaults per session.
+- Collapsible details panel: close button in the panel, a slim edge rail to
+  reopen it, and double-click on the splitter to toggle. The open state is
+  remembered per session.
+
+### Security
+
+- Hardened the todo serializer and entry validation so webview messages can
+  never introduce new command lines: newlines in subjects are flattened and
+  `setEntries` only accepts known actions, valid hashes, and command lines
+  already present in the document.
 
 ### Changed
 

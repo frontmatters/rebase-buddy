@@ -149,6 +149,40 @@ body.is-resizing {
   min-height: 0;
 }
 
+.panes--closed {
+  grid-template-columns: minmax(0, 1fr) 7px 26px;
+}
+
+.details__reopen {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 10px 0;
+  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  border: none;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+}
+
+.details__reopen svg { transform: rotate(90deg); }
+
+.details__reopen:hover {
+  color: var(--vscode-foreground);
+  background: var(--vscode-list-hoverBackground);
+}
+
+.details__reopen:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.details__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+}
+
 /* ---------- splitter ---------- */
 
 .splitter {
@@ -475,6 +509,7 @@ body.is-resizing {
 /* ---------- detail-paneel ---------- */
 
 .details {
+  position: relative;
   overflow-y: auto;
   padding: 14px 16px;
   background: var(--vscode-sideBar-background, var(--vscode-editor-background));

@@ -6,7 +6,7 @@ import type {
   CommitDetails, FileChange, FromWebview, RepoInfo, ToWebview, TodoAction, TodoEntry,
 } from '../src/shared/messages';
 
-interface ViewState { detailsW?: number; newestFirst?: boolean }
+interface ViewState { detailsW?: number; newestFirst?: boolean; detailsOpen?: boolean }
 declare function acquireVsCodeApi(): {
   postMessage(msg: FromWebview): void;
   getState(): ViewState | undefined;
@@ -36,12 +36,19 @@ let abortArmed = false;
 let abortTimer: ReturnType<typeof setTimeout> | undefined;
 let detailsW = vscode.getState?.()?.detailsW ?? 340;
 let newestFirst = vscode.getState?.()?.newestFirst ?? false;
+let detailsOpen = vscode.getState?.()?.detailsOpen ?? true;
 let confirmAbort = true;
 const details = new Map<string, CommitDetails>();
 const detailErrors = new Map<string, string>();
 
 function saveState(): void {
-  vscode.setState?.({ detailsW, newestFirst });
+  vscode.setState?.({ detailsW, newestFirst, detailsOpen });
+}
+
+function toggleDetails(open: boolean): void {
+  detailsOpen = open;
+  saveState();
+  render();
 }
 
 /* Squash/fixup smelt in de vorige commit (in todo-volgorde); drops vallen
@@ -105,6 +112,7 @@ const LINK_D = 'M9 2h5v5h-1V3.7L7.85 8.85l-.7-.7L12.3 3H9V2zM3.5 4H7v1H4v8h8V9h1
 const TERMINAL_D = 'M2.5 3h11l.5.5v9l-.5.5h-11l-.5-.5v-9l.5-.5zM3 12h10V4H3v8zm2.3-6.3l2 2v.6l-2 2-.6-.6L6.4 8 4.7 6.3l.6-.6zM8 10h3v1H8v-1z';
 const CHEV_D = 'M3.9 5.7l.7-.7L8 8.4l3.4-3.4.7.7L8 9.8 3.9 5.7z';
 const CHECK_D = 'M13.5 4.6l-7 7-3.6-3.6.7-.7 2.9 2.9 6.3-6.3.7.7z';
+const CLOSE_D = 'M4.3 3.6L8 7.3l3.7-3.7.7.7L8.7 8l3.7 3.7-.7.7L8 8.7l-3.7 3.7-.7-.7L7.3 8 3.6 4.3l.7-.7z';
 
 function post(msg: FromWebview): void {
   vscode.postMessage(msg);
@@ -266,15 +274,31 @@ function panes(): HTMLElement {
   for (const i of order) list.append(row(entries[i], i));
   list.addEventListener('scroll', closeMenu);
 
+  if (!detailsOpen) {
+    const rail = el('button', 'details__reopen');
+    rail.title = 'Show commit details';
+    rail.setAttribute('aria-label', 'Show commit details');
+    rail.append(svgIcon(CHEV_D, 12));
+    rail.addEventListener('click', () => toggleDetails(true));
+    return el('main', 'panes panes--closed', list, splitter(), rail);
+  }
+
   const aside = el('aside', 'details');
-  aside.append(...detailsChildren());
+  const closeBtn = el('button', 'details__close iconbtn');
+  closeBtn.title = 'Hide commit details';
+  closeBtn.setAttribute('aria-label', 'Hide commit details');
+  closeBtn.append(svgIcon(CLOSE_D, 13));
+  closeBtn.addEventListener('click', () => toggleDetails(false));
+  aside.append(closeBtn, ...detailsChildren());
   return el('main', 'panes', list, splitter(), aside);
 }
 
 function splitter(): HTMLElement {
   const bar = el('div', 'splitter');
-  bar.title = 'Drag to resize';
+  bar.title = 'Drag to resize · double-click to toggle';
+  bar.addEventListener('dblclick', () => toggleDetails(!detailsOpen));
   bar.addEventListener('mousedown', (e) => {
+    if (!detailsOpen) return;
     e.preventDefault();
     closeMenu();
     bar.classList.add('splitter--active');
