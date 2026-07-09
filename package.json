@@ -10,9 +10,25 @@
   "engines": {
     "vscode": "^1.85.0"
   },
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/frontmatters/rebaser.git"
+  },
   "categories": [
     "SCM Providers"
   ],
+  "keywords": [
+    "git",
+    "rebase",
+    "interactive rebase",
+    "commit",
+    "history"
+  ],
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
   "main": "./dist/extension.js",
   "contributes": {
     "customEditors": [
