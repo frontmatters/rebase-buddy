@@ -57,8 +57,14 @@ export interface RepoInfo {
   commitUrlBase?: string;
 }
 
+export interface UserPrefs {
+  defaultOrder: 'oldest-first' | 'newest-first';
+  detailsWidth: number;
+  confirmAbort: boolean;
+}
+
 export type ToWebview =
-  | { type: 'init'; entries: TodoEntry[]; repo: RepoInfo }
+  | { type: 'init'; entries: TodoEntry[]; repo: RepoInfo; prefs: UserPrefs }
   | { type: 'entries'; entries: TodoEntry[] }
   | { type: 'details'; sha: string; details: CommitDetails | null; error?: string };
 

@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   letting git fail mid-rebase.
 - Hover copy button next to each commit hash in the list, copying the full
   commit id with inline confirmation.
+- Extension settings: `rebaseBuddy.defaultOrder` (initial list order),
+  `rebaseBuddy.detailsWidth` (initial panel width) and
+  `rebaseBuddy.confirmAbort` (two-step abort toggle). In-editor changes
+  override the defaults per session.
 
 ### Changed
 

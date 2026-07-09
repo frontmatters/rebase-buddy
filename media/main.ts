@@ -36,6 +36,7 @@ let abortArmed = false;
 let abortTimer: ReturnType<typeof setTimeout> | undefined;
 let detailsW = vscode.getState?.()?.detailsW ?? 340;
 let newestFirst = vscode.getState?.()?.newestFirst ?? false;
+let confirmAbort = true;
 const details = new Map<string, CommitDetails>();
 const detailErrors = new Map<string, string>();
 
@@ -216,7 +217,7 @@ function topbar(): HTMLElement {
   const abortBtn = el('button', `btn btn--ghost${abortArmed ? ' btn--danger' : ''}`,
     abortArmed ? 'Confirm abort' : 'Abort');
   abortBtn.addEventListener('click', () => {
-    if (abortArmed) {
+    if (abortArmed || !confirmAbort) {
       post({ type: 'abort' });
       return;
     }
@@ -555,12 +556,23 @@ document.addEventListener('keydown', (e) => {
 window.addEventListener('message', (event: MessageEvent<ToWebview>) => {
   const msg = event.data;
   switch (msg.type) {
-    case 'init':
+    case 'init': {
       entries = msg.entries;
       repo = msg.repo;
+      // Settings gelden als default; sessie-state (toggle/splitter) wint.
+      const state = vscode.getState?.();
+      confirmAbort = msg.prefs.confirmAbort;
+      if (state?.newestFirst === undefined) {
+        newestFirst = msg.prefs.defaultOrder === 'newest-first';
+      }
+      if (state?.detailsW === undefined) {
+        detailsW = Math.min(640, Math.max(240, msg.prefs.detailsWidth));
+        document.documentElement.style.setProperty('--details-w', `${detailsW}px`);
+      }
       if (selected < 0 && entries.length > 0) selected = 0;
       render();
       break;
+    }
     case 'entries':
       entries = msg.entries;
       if (selected >= entries.length) selected = entries.length - 1;

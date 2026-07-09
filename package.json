@@ -56,7 +56,37 @@
         "command": "rebaser.disable",
         "title": "Rebase Buddy: Disable (restore previous rebase editor)"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Rebase Buddy",
+      "properties": {
+        "rebaseBuddy.defaultOrder": {
+          "type": "string",
+          "enum": [
+            "oldest-first",
+            "newest-first"
+          ],
+          "enumDescriptions": [
+            "Git's todo order: the rebase applies top to bottom.",
+            "Log order: newest commit on top."
+          ],
+          "default": "oldest-first",
+          "description": "Default display order of the commit list when a rebase editor opens. The in-editor toggle overrides this for the session."
+        },
+        "rebaseBuddy.detailsWidth": {
+          "type": "number",
+          "default": 340,
+          "minimum": 240,
+          "maximum": 640,
+          "description": "Initial width of the commit details panel in pixels. Dragging the splitter overrides this for the session."
+        },
+        "rebaseBuddy.confirmAbort": {
+          "type": "boolean",
+          "default": true,
+          "description": "Require a second click to confirm Abort."
+        }
+      }
+    }
   },
   "scripts": {
     "build": "node esbuild.mjs",

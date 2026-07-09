@@ -122,7 +122,12 @@
       setState: function (s) { mockState = s; },
       postMessage: function (msg) {
         if (msg.type === 'ready') {
-          send({ type: 'init', entries: ENTRIES, repo: { branch: 'feature', onto: '4a5b6c7', ontoSubject: 'chore: initial scaffold', root: '/tmp/fixture', commitUrlBase: 'https://example.com/owner/repo/commit/' } });
+          var params = new URLSearchParams(location.search);
+          send({ type: 'init', entries: ENTRIES, repo: { branch: 'feature', onto: '4a5b6c7', ontoSubject: 'chore: initial scaffold', root: '/tmp/fixture', commitUrlBase: 'https://example.com/owner/repo/commit/' }, prefs: {
+            defaultOrder: params.get('order') || 'oldest-first',
+            detailsWidth: Number(params.get('detailsWidth') || 340),
+            confirmAbort: params.get('confirmAbort') !== 'false'
+          } });
           Object.keys(DETAILS).forEach(function (sha) {
             send({ type: 'details', sha: sha, details: DETAILS[sha] });
           });
