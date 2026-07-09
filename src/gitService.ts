@@ -58,6 +58,7 @@ export class GitService {
       const headName = (await readFile(path.join(this.rebaseDir, 'head-name'), 'utf8')).trim();
       info.branch = headName.replace(/^refs\/heads\//, '');
     } catch { /* detached of ontbrekend state-bestand: geen branchnaam tonen */ }
+    info.commitUrlBase = await this.commitUrlBase();
     try {
       const onto = (await readFile(path.join(this.rebaseDir, 'onto'), 'utf8')).trim();
       const record = parseCommitRecords(await git(
@@ -113,6 +114,21 @@ export class GitService {
     details.files = mergeFileChanges(parseNumstatZ(numstatOut), parseNameStatusZ(nameStatusOut));
     this.detailsCache.set(sha, details);
     return details;
+  }
+
+  /** Web-URL-prefix voor commit-pagina's op origin (GitHub/Gitea/GitLab
+   * delen het /commit/-pad). Undefined zonder bruikbare remote. */
+  private async commitUrlBase(): Promise<string | undefined> {
+    try {
+      const remote = (await git(['remote', 'get-url', 'origin'], this.repoRoot)).trim();
+      const ssh = /^(?:ssh:\/\/)?(?:[\w.-]+@)?([\w.-]+(?::\d+)?)[:/](.+?)(?:\.git)?$/;
+      if (remote.startsWith('http://') || remote.startsWith('https://')) {
+        return `${remote.replace(/\.git$/, '')}/commit/`;
+      }
+      const match = ssh.exec(remote);
+      if (match) return `https://${match[1].replace(/:\d+$/, '')}/${match[2]}/commit/`;
+    } catch { /* geen remote: link verbergen */ }
+    return undefined;
   }
 
   /** Bestandsinhoud op een bepaalde revisie; lege string voor niet-bestaande

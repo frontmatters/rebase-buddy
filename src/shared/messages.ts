@@ -53,6 +53,8 @@ export interface RepoInfo {
   onto?: string;
   ontoSubject?: string;
   root: string;
+  /** Web-URL-prefix voor commits op de remote (…/commit/), indien afleidbaar. */
+  commitUrlBase?: string;
 }
 
 export type ToWebview =
@@ -65,5 +67,7 @@ export type FromWebview =
   | { type: 'setEntries'; entries: TodoEntry[] }
   | { type: 'requestDetails'; sha: string }
   | { type: 'openDiff'; sha: string; file: FileChange }
+  | { type: 'copySha'; sha: string }
+  | { type: 'openCommit'; sha: string }
   | { type: 'start' }
   | { type: 'abort' };

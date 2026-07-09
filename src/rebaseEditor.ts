@@ -52,6 +52,7 @@ export class RebaseEditorProvider implements vscode.CustomTextEditorProvider {
     let trailer = parseTodo(document.getText()).trailer;
     let applyingEdit = false;
     let generation = 0;
+    let commitUrlBase: string | undefined;
     const post = (msg: ToWebview) => panel.webview.postMessage(msg);
 
     const sendEntries = async (initial: boolean) => {
@@ -59,7 +60,9 @@ export class RebaseEditorProvider implements vscode.CustomTextEditorProvider {
       const parsed = parseTodo(document.getText());
       trailer = parsed.trailer;
       if (initial) {
-        post({ type: 'init', entries: parsed.entries, repo: await service.repoInfo() });
+        const repo = await service.repoInfo();
+        commitUrlBase = repo.commitUrlBase;
+        post({ type: 'init', entries: parsed.entries, repo });
       } else {
         post({ type: 'entries', entries: parsed.entries });
       }
@@ -96,6 +99,17 @@ export class RebaseEditorProvider implements vscode.CustomTextEditorProvider {
           case 'openDiff':
             if (!isValidSha(msg.sha) || typeof msg.file?.path !== 'string') break;
             await this.openDiff(service, msg.sha, msg.file);
+            break;
+          case 'copySha': {
+            if (!isValidSha(msg.sha)) break;
+            // Kopieer de volledige sha, ook als de todo een verkorte bevat.
+            const full = (await service.commitDetails(msg.sha)).sha;
+            await vscode.env.clipboard.writeText(full);
+            break;
+          }
+          case 'openCommit':
+            if (!isValidSha(msg.sha) || !commitUrlBase) break;
+            await vscode.env.openExternal(vscode.Uri.parse(`${commitUrlBase}${msg.sha}`));
             break;
           case 'start':
             await document.save();

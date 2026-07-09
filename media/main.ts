@@ -61,6 +61,8 @@ function svgIcon(pathD: string, size = 14): SVGSVGElement {
 }
 
 const GRIP_D = 'M6 3.5a1 1 0 110-2 1 1 0 010 2zm4 0a1 1 0 110-2 1 1 0 010 2zM6 9a1 1 0 110-2 1 1 0 010 2zm4 0a1 1 0 110-2 1 1 0 010 2zm-4 5.5a1 1 0 110-2 1 1 0 010 2zm4 0a1 1 0 110-2 1 1 0 010 2z';
+const COPY_D = 'M5 2h8l1 1v8h-1V3H5V2zM3 5h8l1 1v8l-1 1H3l-1-1V6l1-1zm0 1v8h8V6H3z';
+const LINK_D = 'M9 2h5v5h-1V3.7L7.85 8.85l-.7-.7L12.3 3H9V2zM3.5 4H7v1H4v8h8V9h1v4.5l-.5.5h-9l-.5-.5v-9l.5-.5z';
 const TERMINAL_D = 'M2.5 3h11l.5.5v9l-.5.5h-11l-.5-.5v-9l.5-.5zM3 12h10V4H3v8zm2.3-6.3l2 2v.6l-2 2-.6-.6L6.4 8 4.7 6.3l.6-.6zM8 10h3v1H8v-1z';
 
 function post(msg: FromWebview): void {
@@ -218,8 +220,32 @@ function detailsChildren(): Node[] {
   const shaCode = el('code', 'details__sha', meta.shortSha);
   shaCode.title = meta.sha;
 
+  const copyBtn = el('button', 'iconbtn');
+  copyBtn.title = 'Copy full commit id';
+  copyBtn.append(svgIcon(COPY_D, 13));
+  copyBtn.addEventListener('click', () => {
+    post({ type: 'copySha', sha: entry.sha });
+    copyBtn.replaceChildren('copied');
+    copyBtn.classList.add('iconbtn--done');
+    setTimeout(() => {
+      copyBtn.replaceChildren(svgIcon(COPY_D, 13));
+      copyBtn.classList.remove('iconbtn--done');
+    }, 1500);
+  });
+
+  const header = el('div', 'details__header',
+    el('span', `chip chip--${entry.action}`, entry.action), shaCode, copyBtn);
+
+  if (repo?.commitUrlBase) {
+    const linkBtn = el('button', 'iconbtn');
+    linkBtn.title = 'Open commit on remote';
+    linkBtn.append(svgIcon(LINK_D, 13));
+    linkBtn.addEventListener('click', () => post({ type: 'openCommit', sha: entry.sha }));
+    header.append(linkBtn);
+  }
+
   const nodes: Node[] = [
-    el('div', 'details__header', el('span', `chip chip--${entry.action}`, entry.action), shaCode),
+    header,
     el('h2', 'details__subject', meta.subject),
     el('div', 'details__byline', `${meta.author} <${meta.email}> · ${dateFmt}`),
   ];

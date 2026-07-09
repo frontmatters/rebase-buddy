@@ -119,7 +119,7 @@
     return {
       postMessage: function (msg) {
         if (msg.type === 'ready') {
-          send({ type: 'init', entries: ENTRIES, repo: { branch: 'feature', onto: '4a5b6c7', ontoSubject: 'chore: initial scaffold', root: '/tmp/fixture' } });
+          send({ type: 'init', entries: ENTRIES, repo: { branch: 'feature', onto: '4a5b6c7', ontoSubject: 'chore: initial scaffold', root: '/tmp/fixture', commitUrlBase: 'https://example.com/owner/repo/commit/' } });
           Object.keys(DETAILS).forEach(function (sha) {
             send({ type: 'details', sha: sha, details: DETAILS[sha] });
           });

@@ -306,6 +306,29 @@ code, kbd, .row__sha, .row__rawtext, .details__sha, .details__body {
 
 .details__sha { color: var(--vscode-descriptionForeground); }
 
+.iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--vscode-descriptionForeground);
+  font-family: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.iconbtn:hover {
+  color: var(--vscode-foreground);
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.15));
+}
+
+.iconbtn--done { color: var(--r-add); }
+
 .details__subject {
   font-size: 14px;
   font-weight: 600;
