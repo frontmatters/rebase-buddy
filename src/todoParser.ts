@@ -77,7 +77,7 @@ function parseActionLine(line: string): ActionEntry | null {
 export function serializeTodo(entries: TodoEntry[], trailer: string): string {
   // Newlines in velden zouden extra todo-regels injecteren die git uitvoert;
   // plat slaan naar spaties, wat er ook binnenkomt.
-  const flatten = (s: string) => s.replace(/[\r\n]+/g, ' ');
+  const flatten = (s: string) => s.replace(/[\r\n]+/g, ' ').replace(/[\x00-\x08\x0b-\x1f\x7f]/g, '');
   const lines = entries.map((e) => {
     if (e.kind === 'raw') return flatten(e.text);
     const flag = e.flag ? `${e.flag} ` : '';

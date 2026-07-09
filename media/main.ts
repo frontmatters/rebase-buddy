@@ -135,10 +135,13 @@ function relativeDate(iso: string): string {
 // ---------- custom action-menu ----------
 
 let menuEl: HTMLElement | null = null;
+let menuAnchor: HTMLElement | null = null;
 
 function closeMenu(): void {
   menuEl?.remove();
   menuEl = null;
+  menuAnchor?.setAttribute('aria-expanded', 'false');
+  menuAnchor = null;
 }
 
 function openActionMenu(index: number, anchor: HTMLElement): void {
@@ -197,6 +200,8 @@ function openActionMenu(index: number, anchor: HTMLElement): void {
     menu.style.left = `${window.innerWidth - menuRect.width - 8}px`;
   }
   menuEl = menu;
+  menuAnchor = anchor;
+  anchor.setAttribute('aria-expanded', 'true');
   (focusTarget ?? menu.querySelector<HTMLElement>('.menu__item'))?.focus();
 }
 

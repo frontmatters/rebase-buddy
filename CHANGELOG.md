@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-09
+
 ### Added
 
 - Resizable panel split: drag the divider between the commit list and the
@@ -33,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- Menu buttons expose aria-expanded state; the serializer also strips
+  control characters from subjects and command lines.
 - Hardened the todo serializer and entry validation so webview messages can
   never introduce new command lines: newlines in subjects are flattened and
   `setEntries` only accepts known actions, valid hashes, and command lines
@@ -93,6 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Webview built without `innerHTML` (XSS-safe by construction) under a strict
   CSP with script nonce.
 
-[Unreleased]: https://github.com/frontmatters/rebase-buddy/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/frontmatters/rebase-buddy/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/frontmatters/rebase-buddy/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/frontmatters/rebase-buddy/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/frontmatters/rebase-buddy/releases/tag/v0.1.0
