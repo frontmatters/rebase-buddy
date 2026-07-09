@@ -773,6 +773,7 @@ function setAction(i: number, action: TodoAction): void {
  * entries is altijd canoniek (oldest-first), dus bij newest-first draaien we
  * de view om. Selectie en anchor volgen de verplaatste objecten by identity. */
 function commitView(viewObjs: TodoEntry[], movedObjs: TodoEntry[]): void {
+  editingIndex = null; // canonieke indices verschuiven; een open edit zou stale zijn
   entries = newestFirst ? viewObjs.slice().reverse() : viewObjs.slice();
   selectedSet = new Set(movedObjs.map((o) => entries.indexOf(o)));
   selected = entries.indexOf(movedObjs[0]);
