@@ -664,6 +664,8 @@ body.is-resizing {
 
 .msgedit__area {
   width: 100%;
+  min-height: 32px;
+  overflow: hidden;
   padding: 8px 10px;
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 12px;

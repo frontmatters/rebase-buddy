@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The message editor auto-fits its height to the content and grows while
+  typing (capped at half the viewport).
 - Alignment polish: the commit message and its edit button are optically
   centered, the close button aligns with the panel grid, list columns are
   tighter, and the message editor hint no longer wraps awkwardly.

@@ -633,8 +633,15 @@ function messageEditor(entry: ActionEntry, meta: CommitDetails): HTMLElement {
 
   const area = el('textarea', 'msgedit__area') as HTMLTextAreaElement;
   area.value = initial;
-  area.rows = Math.min(12, Math.max(4, initial.split('\n').length + 1));
+  area.rows = 1;
   area.spellcheck = false;
+  // Auto-fit: krimp naar de inhoud en groei mee tijdens het typen.
+  const autosize = () => {
+    area.style.height = 'auto';
+    area.style.height = `${Math.min(area.scrollHeight + 2, window.innerHeight * 0.5)}px`;
+  };
+  area.addEventListener('input', autosize);
+  requestAnimationFrame(autosize);
 
   const confirm = () => {
     const text = area.value.trim();
