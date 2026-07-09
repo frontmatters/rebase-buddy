@@ -6,10 +6,11 @@ import type {
   CommitDetails, FileChange, FromWebview, RepoInfo, ToWebview, TodoAction, TodoEntry,
 } from '../src/shared/messages';
 
+interface ViewState { detailsW?: number; newestFirst?: boolean }
 declare function acquireVsCodeApi(): {
   postMessage(msg: FromWebview): void;
-  getState(): { detailsW?: number } | undefined;
-  setState(state: { detailsW?: number }): void;
+  getState(): ViewState | undefined;
+  setState(state: ViewState): void;
 };
 const vscode = acquireVsCodeApi();
 
@@ -34,8 +35,13 @@ let dragFrom = -1;
 let abortArmed = false;
 let abortTimer: ReturnType<typeof setTimeout> | undefined;
 let detailsW = vscode.getState?.()?.detailsW ?? 340;
+let newestFirst = vscode.getState?.()?.newestFirst ?? false;
 const details = new Map<string, CommitDetails>();
 const detailErrors = new Map<string, string>();
+
+function saveState(): void {
+  vscode.setState?.({ detailsW, newestFirst });
+}
 
 const app = document.getElementById('app')!;
 document.documentElement.style.setProperty('--details-w', `${detailsW}px`);
@@ -205,11 +211,25 @@ function topbar(): HTMLElement {
 }
 
 function panes(): HTMLElement {
-  const list = el('section', 'list',
-    el('div', 'list__head', el('span', undefined, 'applied top to bottom · oldest first')));
+  const orderBtn = el('button', 'list__order',
+    newestFirst ? 'newest first' : 'oldest first');
+  orderBtn.append(svgIcon(CHEV_D, 11));
+  orderBtn.title = 'Toggle display order (the rebase itself always applies oldest first)';
+  orderBtn.addEventListener('click', () => {
+    newestFirst = !newestFirst;
+    saveState();
+    render();
+  });
+
+  const list = el('section', `list${newestFirst ? ' list--newest' : ''}`,
+    el('div', 'list__head',
+      el('span', undefined, newestFirst ? 'applied bottom to top' : 'applied top to bottom'),
+      orderBtn));
   list.setAttribute('role', 'listbox');
   list.setAttribute('aria-label', 'Rebase todo list');
-  entries.forEach((entry, i) => list.append(row(entry, i)));
+  const order = entries.map((_, i) => i);
+  if (newestFirst) order.reverse();
+  for (const i of order) list.append(row(entries[i], i));
   list.addEventListener('scroll', closeMenu);
 
   const aside = el('aside', 'details');
@@ -234,7 +254,7 @@ function splitter(): HTMLElement {
       document.removeEventListener('mouseup', onUp);
       bar.classList.remove('splitter--active');
       document.body.classList.remove('is-resizing');
-      vscode.setState?.({ detailsW });
+      saveState();
     };
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
@@ -463,7 +483,8 @@ document.addEventListener('keydown', (e) => {
   const action = ACTION_KEYS[e.key.toLowerCase()];
 
   if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-    const delta = e.key === 'ArrowUp' ? -1 : 1;
+    // Pijltjes werken in beeld-volgorde; bij newest-first is canoniek omgekeerd.
+    const delta = (e.key === 'ArrowUp' ? -1 : 1) * (newestFirst ? -1 : 1);
     e.preventDefault();
     if (e.altKey && selected >= 0) {
       const to = selected + delta;

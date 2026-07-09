@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   body is vertically resizable too.
 - Custom action dropdown replacing the native select: color-coded actions
   with inline hints, keyboard navigation and smooth open animation.
+- Display-order toggle in the list header: oldest first (git's todo order)
+  or newest first (log order). Arrow navigation and squash/fixup connectors
+  follow the chosen direction; the rebase itself always applies oldest first.
 
 ### Changed
 

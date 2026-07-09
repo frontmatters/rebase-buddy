@@ -185,7 +185,11 @@ body.is-resizing {
 }
 
 .list__head {
-  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px 4px 12px;
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -196,6 +200,34 @@ body.is-resizing {
   background: var(--vscode-editor-background);
   z-index: 1;
 }
+
+.list__order {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.list__order:hover {
+  color: var(--vscode-foreground);
+  border-color: var(--r-border);
+}
+
+.list__order:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.list__order svg { opacity: 0.6; }
+.list--newest .list__order svg { transform: rotate(180deg); }
 
 .row {
   display: grid;
@@ -251,6 +283,14 @@ body.is-resizing {
   width: 7px;
   border-left: 1px solid var(--r-squash);
   border-bottom: 1px solid var(--r-squash);
+}
+
+/* Newest-first: het squash/fixup-doel staat een rij lager, connector wijst omlaag. */
+.list--newest .row--joined .row__connector::before {
+  top: auto;
+  bottom: -1px;
+  border-bottom: none;
+  border-top: 1px solid var(--r-squash);
 }
 
 .row--dropped .row__subject {
