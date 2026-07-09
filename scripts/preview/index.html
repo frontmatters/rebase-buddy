@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<!-- Preview-harness voor visuele verificatie buiten VS Code: mockt
+     acquireVsCodeApi + theme-variabelen en voedt de webview met fixture-data.
+     Gebruik: serveer de repo-root en open scripts/preview/index.html?theme=dark|light -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rebaser preview</title>
+<link rel="stylesheet" href="../../dist/styles.css">
+<script>
+(function () {
+  var THEMES = {
+    dark: {
+      'font-family': '-apple-system, BlinkMacSystemFont, sans-serif',
+      'editor-font-family': 'Menlo, Monaco, monospace',
+      'foreground': '#cccccc',
+      'descriptionForeground': '#9d9d9d',
+      'editor-background': '#1e1e1e',
+      'sideBar-background': '#252526',
+      'panel-border': '#3c3c3c',
+      'focusBorder': '#007fd4',
+      'button-background': '#0e639c',
+      'button-foreground': '#ffffff',
+      'button-hoverBackground': '#1177bb',
+      'list-hoverBackground': '#2a2d2e',
+      'list-activeSelectionBackground': '#04395e',
+      'list-activeSelectionForeground': '#ffffff',
+      'toolbar-hoverBackground': 'rgba(90,93,94,0.31)',
+      'dropdown-background': '#3c3c3c',
+      'dropdown-foreground': '#f0f0f0',
+      'textCodeBlock-background': 'rgba(10,10,10,0.4)',
+      'charts-blue': '#3794ff',
+      'charts-yellow': '#cca700',
+      'charts-purple': '#b180d7',
+      'charts-red': '#f14c4c',
+      'charts-green': '#89d185'
+    },
+    light: {
+      'font-family': '-apple-system, BlinkMacSystemFont, sans-serif',
+      'editor-font-family': 'Menlo, Monaco, monospace',
+      'foreground': '#3b3b3b',
+      'descriptionForeground': '#717171',
+      'editor-background': '#ffffff',
+      'sideBar-background': '#f8f8f8',
+      'panel-border': '#e5e5e5',
+      'focusBorder': '#005fb8',
+      'button-background': '#005fb8',
+      'button-foreground': '#ffffff',
+      'button-hoverBackground': '#0258a8',
+      'list-hoverBackground': '#f2f2f2',
+      'list-activeSelectionBackground': '#e8e8e8',
+      'list-activeSelectionForeground': '#000000',
+      'toolbar-hoverBackground': 'rgba(184,184,184,0.31)',
+      'dropdown-background': '#ffffff',
+      'dropdown-foreground': '#3b3b3b',
+      'textCodeBlock-background': 'rgba(220,220,220,0.4)',
+      'charts-blue': '#005fb8',
+      'charts-yellow': '#996f00',
+      'charts-purple': '#652d90',
+      'charts-red': '#cd3131',
+      'charts-green': '#107c10'
+    }
+  };
+  var theme = new URLSearchParams(location.search).get('theme') || 'dark';
+  var vars = THEMES[theme] || THEMES.dark;
+  for (var key in vars) {
+    document.documentElement.style.setProperty('--vscode-' + key, vars[key]);
+  }
+
+  var now = Date.now();
+  function iso(hoursAgo) { return new Date(now - hoursAgo * 3600000).toISOString(); }
+  function meta(sha, subject, body, hoursAgo, files) {
+    return {
+      sha: sha + '0000000000000000000000000000000000'.slice(sha.length - 6),
+      shortSha: sha, author: 'user1', email: 'm@example.com',
+      date: iso(hoursAgo), subject: subject, body: body, parents: ['aaaaaaa'], files: files
+    };
+  }
+
+  var DETAILS = {
+    '174e1a7': meta('174e1a7', 'feat: add login form', '', 26, [
+      { path: 'src/login.ts', status: 'A', added: 42, deleted: 0 },
+      { path: 'src/styles/form.css', status: 'A', added: 31, deleted: 0 }
+    ]),
+    'c511eb0': meta('c511eb0', 'feat: add version constant', '', 22, [
+      { path: 'src/version.ts', status: 'A', added: 1, deleted: 0 }
+    ]),
+    'd2e1f41': meta('d2e1f41', 'fix: greeting typo', '', 8, [
+      { path: 'src/app.ts', status: 'M', added: 1, deleted: 1 }
+    ]),
+    '526e9dd': meta('526e9dd', 'wip styles', '', 5, [
+      { path: 'src/styles.css', status: 'A', added: 12, deleted: 0 }
+    ]),
+    '64762bc': meta('64762bc', 'wip bump', '', 4, [
+      { path: 'src/version.ts', status: 'M', added: 1, deleted: 1 }
+    ]),
+    'cf6cd7a': meta('cf6cd7a', 'refactor: rename login module to auth',
+      'The login module grew beyond forms, so auth covers the load better.\n\nAlso adds a logout stub for the next iteration.', 1, [
+      { path: 'src/auth.ts', oldPath: 'src/login.ts', status: 'R', added: 3, deleted: 0 },
+      { path: 'assets/lock.png', status: 'A', added: null, deleted: null }
+    ])
+  };
+
+  var ENTRIES = [
+    { kind: 'action', action: 'pick', sha: '174e1a7', subject: 'feat: add login form' },
+    { kind: 'action', action: 'pick', sha: 'c511eb0', subject: 'feat: add version constant' },
+    { kind: 'action', action: 'reword', sha: 'd2e1f41', subject: 'fix: greeting typo' },
+    { kind: 'action', action: 'squash', sha: '526e9dd', subject: 'wip styles' },
+    { kind: 'action', action: 'fixup', sha: '64762bc', subject: 'wip bump' },
+    { kind: 'raw', text: 'exec npm test' },
+    { kind: 'action', action: 'drop', sha: 'cf6cd7a', subject: 'refactor: rename login module to auth' }
+  ];
+
+  function send(msg) {
+    setTimeout(function () { window.postMessage(msg, '*'); }, 0);
+  }
+
+  window.acquireVsCodeApi = function () {
+    return {
+      postMessage: function (msg) {
+        if (msg.type === 'ready') {
+          send({ type: 'init', entries: ENTRIES, repo: { branch: 'feature', onto: '4a5b6c7', ontoSubject: 'chore: initial scaffold', root: '/tmp/fixture' } });
+          Object.keys(DETAILS).forEach(function (sha) {
+            send({ type: 'details', sha: sha, details: DETAILS[sha] });
+          });
+        } else if (msg.type === 'requestDetails') {
+          send({ type: 'details', sha: msg.sha, details: DETAILS[msg.sha] || null });
+        } else {
+          console.log('[harness]', JSON.stringify(msg));
+        }
+      }
+    };
+  };
+})();
+</script>
+</head>
+<body>
+<div id="app"></div>
+<script src="../../dist/webview.js"></script>
+</body>
+</html>
