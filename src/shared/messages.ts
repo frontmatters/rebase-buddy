@@ -65,6 +65,7 @@ export interface UserPrefs {
   detailsWidth: number;
   confirmAbort: boolean;
   showBaseCommit: boolean;
+  showActionHints: boolean;
 }
 
 export type ToWebview =

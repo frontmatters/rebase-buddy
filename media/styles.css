@@ -458,6 +458,15 @@ body.is-resizing {
   box-shadow: 0 4px 14px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.25));
 }
 
+/* Zonder hints shrink-wrapt het menu naar de action-namen (de host zet
+   min-width op de anchor-breedte); dividers geven de smalle lijst houvast. */
+.menu--compact { min-width: 0; }
+
+.menu--compact .menu__item + .menu__item {
+  border-top: 1px solid var(--r-border);
+  border-radius: 0;
+}
+
 .menu__item {
   display: flex;
   align-items: baseline;

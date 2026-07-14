@@ -41,6 +41,7 @@ let newestFirst = vscode.getState?.()?.newestFirst ?? false;
 let detailsOpen = vscode.getState?.()?.detailsOpen ?? true;
 let confirmAbort = true;
 let showBaseCommit = true;
+let showActionHints = true;
 let editingIndex: number | null = null;
 const details = new Map<string, CommitDetails>();
 const detailErrors = new Map<string, string>();
@@ -202,7 +203,7 @@ function openActionMenu(index: number, anchor: HTMLElement): void {
   if (entry?.kind !== 'action') return;
   closeMenu();
 
-  const menu = el('div', 'menu');
+  const menu = el('div', `menu${showActionHints ? '' : ' menu--compact'}`);
   menu.setAttribute('role', 'menu');
   let focusTarget: HTMLElement | null = null;
 
@@ -210,11 +211,13 @@ function openActionMenu(index: number, anchor: HTMLElement): void {
     const current = action === entry.action;
     const meld = action === 'squash' || action === 'fixup';
     const disabled = meld && !hasMeldTarget(index);
+    const hint = disabled ? 'needs an earlier commit to meld into' : ACTION_HINTS[action];
     const item = el('button',
       `menu__item${current ? ' menu__item--current' : ''}${disabled ? ' menu__item--disabled' : ''}`,
       el('span', `menu__label menu__label--${action}`, action),
-      el('span', 'menu__hint', disabled ? 'needs an earlier commit to meld into' : ACTION_HINTS[action]),
     );
+    if (showActionHints) item.append(el('span', 'menu__hint', hint));
+    else item.title = hint;
     item.setAttribute('role', 'menuitem');
     item.setAttribute('aria-disabled', String(disabled));
     item.addEventListener('click', (e) => {
@@ -242,6 +245,8 @@ function openActionMenu(index: number, anchor: HTMLElement): void {
   });
 
   const rect = anchor.getBoundingClientRect();
+  // Compact menu: nooit smaller dan de knop waar het uit openklapt.
+  if (!showActionHints) menu.style.minWidth = `${rect.width}px`;
   menu.style.left = `${rect.left}px`;
   menu.style.top = `${rect.bottom + 2}px`;
   document.body.append(menu);
@@ -900,6 +905,7 @@ window.addEventListener('message', (event: MessageEvent<ToWebview>) => {
       const state = vscode.getState?.();
       confirmAbort = msg.prefs.confirmAbort;
       showBaseCommit = msg.prefs.showBaseCommit;
+      showActionHints = msg.prefs.showActionHints;
       if (state?.newestFirst === undefined) {
         newestFirst = msg.prefs.defaultOrder === 'newest-first';
       }

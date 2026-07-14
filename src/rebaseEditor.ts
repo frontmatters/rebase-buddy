@@ -149,6 +149,7 @@ export class RebaseEditorProvider implements vscode.CustomTextEditorProvider {
             detailsWidth: cfg.get('detailsWidth', 340),
             confirmAbort: cfg.get('confirmAbort', true),
             showBaseCommit: cfg.get('showBaseCommit', true),
+            showActionHints: cfg.get('showActionHints', true),
           },
         });
       } else {
@@ -265,7 +266,7 @@ export class RebaseEditorProvider implements vscode.CustomTextEditorProvider {
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        this.output.appendLine(`[rebaser] ${msg.type}: ${message}`);
+        this.output.appendLine(`[rebase-buddy] ${msg.type}: ${message}`);
         if (msg.type === 'requestDetails') {
           post({ type: 'details', sha: msg.sha, details: null, error: message });
         }

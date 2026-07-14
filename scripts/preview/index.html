@@ -127,11 +127,16 @@
             defaultOrder: params.get('order') || 'newest-first',
             detailsWidth: Number(params.get('detailsWidth') || 340),
             confirmAbort: params.get('confirmAbort') !== 'false',
-            showBaseCommit: params.get('showBaseCommit') !== 'false'
+            showBaseCommit: params.get('showBaseCommit') !== 'false',
+            showActionHints: params.get('showActionHints') !== 'false'
           } });
           Object.keys(DETAILS).forEach(function (sha) {
             send({ type: 'details', sha: sha, details: DETAILS[sha] });
           });
+        } else if (msg.type === 'setEntries') {
+          // Trouw aan de echte host: bewaar de nieuwe volgorde/acties zodat
+          // latere updates (bv. na een message-edit) niets terugdraaien.
+          ENTRIES = msg.entries;
         } else if (msg.type === 'requestDetails') {
           send({ type: 'details', sha: msg.sha, details: DETAILS[msg.sha] || null });
         } else if (msg.type === 'editMessage') {
