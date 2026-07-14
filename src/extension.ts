@@ -42,7 +42,7 @@ export function activate(context: vscode.ExtensionContext): void {
       await context.globalState.update(PREV_KEY, previous ?? null);
       await gitConfig(['sequence.editor', `"${cliPath()}" --wait`]);
       void vscode.window.showInformationMessage(
-        'Rebaser is now your git rebase editor. Run `git rebase -i` to use it.',
+        'Rebase Buddy is now your git rebase editor. Run `git rebase -i` to use it.',
       );
     }),
 
@@ -54,7 +54,7 @@ export function activate(context: vscode.ExtensionContext): void {
         await gitConfig(['--unset', 'sequence.editor']).catch(() => undefined);
       }
       await context.globalState.update(PREV_KEY, undefined);
-      void vscode.window.showInformationMessage('Rebaser disabled; previous rebase editor restored.');
+      void vscode.window.showInformationMessage('Rebase Buddy disabled; previous rebase editor restored.');
     }),
   );
 }
