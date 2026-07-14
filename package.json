@@ -2,7 +2,7 @@
   "name": "rebase-buddy",
   "displayName": "Rebase Buddy",
   "description": "Interactive rebase editor with commit details — free and minimal",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "publisher": "frontmatters",
   "author": "Frontmatters <hello@frontmatters.dev>",
   "private": true,
@@ -89,6 +89,11 @@
           "type": "boolean",
           "default": true,
           "description": "Show the base commit your changes are applied on top of, greyed out and read-only."
+        },
+        "rebaseBuddy.showActionHints": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a short description next to each action in the action menu. When off, only the action name is shown (descriptions move to hover tooltips)."
         }
       }
     }

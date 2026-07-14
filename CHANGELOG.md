@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-07-14
+
+### Added
+
+- `rebaseBuddy.showActionHints` (default on): turn off to hide the action
+  descriptions in the action menu. The menu then shrinks to the width of the
+  action button, with thin dividers between the items; descriptions stay
+  available as hover tooltips.
+
+### Fixed
+
+- The enable/disable notifications and the output-channel log prefix still
+  said "Rebaser"; they now say "Rebase Buddy". Command ids and the editor
+  viewType are unchanged, so existing keybindings and state keep working.
+
 ## [0.6.1] - 2026-07-09
 
 ### Fixed
