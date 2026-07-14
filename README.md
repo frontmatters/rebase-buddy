@@ -10,6 +10,10 @@ edit, squash, fixup, drop), and inspect every commit's changed files with
 one-click native diffs. Git stays the executor; this is a smart editor for
 git's own todo file, nothing more.
 
+## Demo
+
+![Rebase Buddy demo: changing an action and editing a commit message inline](docs/media/demo.gif)
+
 ## Install
 
 Install **Rebase Buddy** from the Extensions view (`⇧⌘X`, search for
