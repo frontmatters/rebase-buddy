@@ -2,7 +2,7 @@
   "name": "rebase-buddy",
   "displayName": "Rebase Buddy",
   "description": "Interactive rebase editor with commit details — free and minimal",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "publisher": "frontmatters",
   "author": "Frontmatters <hello@frontmatters.dev>",
   "private": true,
@@ -37,7 +37,7 @@
   "contributes": {
     "customEditors": [
       {
-        "viewType": "rebaser.editor",
+        "viewType": "rebaseBuddy.editor",
         "displayName": "Rebase Buddy",
         "selector": [
           {
@@ -49,12 +49,16 @@
     ],
     "commands": [
       {
-        "command": "rebaser.enable",
+        "command": "rebaseBuddy.enable",
         "title": "Rebase Buddy: Enable as Git rebase editor"
       },
       {
-        "command": "rebaser.disable",
+        "command": "rebaseBuddy.disable",
         "title": "Rebase Buddy: Disable (restore previous rebase editor)"
+      },
+      {
+        "command": "rebaseBuddy.rebaseFromHere",
+        "title": "Rebase Buddy: Interactive rebase from here…"
       }
     ],
     "configuration": {

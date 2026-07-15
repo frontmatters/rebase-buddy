@@ -6,7 +6,7 @@ import { GitService } from './gitService';
 import { abortTodo, foldOwnExecLines, parseTodo, serializeTodo } from './todoParser';
 import type { FileChange, FromWebview, ToWebview, TodoEntry } from './shared/messages';
 
-export const DIFF_SCHEME = 'rebaser-git';
+export const DIFF_SCHEME = 'rebase-buddy-git';
 
 /** SHA's uit de webview stromen door naar git-argumenten; valideer het
  * formaat zodat ze nooit als git-optie geïnterpreteerd kunnen worden

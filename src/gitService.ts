@@ -8,6 +8,7 @@ import * as path from 'node:path';
 import {
   COMMIT_FORMAT, mergeFileChanges, parseCommitRecords, parseNameStatusZ, parseNumstatZ,
 } from './gitParsers';
+import type { CommitRecord } from './gitParsers';
 import type { CommitDetails, RepoInfo } from './shared/messages';
 
 function git(args: string[], cwd: string): Promise<string> {
@@ -17,6 +18,39 @@ function git(args: string[], cwd: string): Promise<string> {
       else resolve(stdout);
     });
   });
+}
+
+/** Kandidaat-startpunten voor `rebase -i`: de huidige branch tot aan de
+ * merge-base met origin's default branch (de natuurlijke rebase-scope),
+ * met de laatste `limit` commits als fallback wanneer die niet bepaalbaar
+ * of leeg is (geen remote, of we staan óp de default branch). */
+export async function listRebaseCandidates(root: string, limit = 50): Promise<CommitRecord[]> {
+  let range = 'HEAD';
+  try {
+    const def = (await git(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'], root)).trim();
+    if (def && (await git(['rev-list', '--count', `${def}..HEAD`], root)).trim() !== '0') {
+      range = `${def}..HEAD`;
+    }
+  } catch { /* geen remote default branch: val terug op de limiet */ }
+  return parseCommitRecords(await git(['log', `--format=${COMMIT_FORMAT}`, '-n', String(limit), range], root));
+}
+
+/** Absoluut pad naar de todo van een al lopende interactive rebase, anders undefined. */
+export async function activeRebaseTodoPath(root: string): Promise<string | undefined> {
+  const gitDir = (await git(['rev-parse', '--absolute-git-dir'], root)).trim();
+  const todo = path.join(gitDir, 'rebase-merge', 'git-rebase-todo');
+  try {
+    await readFile(todo);
+    return todo;
+  } catch {
+    return undefined;
+  }
+}
+
+/** True bij staged of unstaged wijzigingen. Untracked files blokkeren een
+ * rebase niet en tellen dus niet mee (-uno). */
+export async function workingTreeDirty(root: string): Promise<boolean> {
+  return (await git(['status', '--porcelain', '-uno'], root)).trim() !== '';
 }
 
 export class GitService {
