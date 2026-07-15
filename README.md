@@ -36,6 +36,13 @@ code --install-extension frontmatters.rebase-buddy
 **Rebase Buddy: Disable** restores your previous `sequence.editor` at any
 time.
 
+### No terminal needed
+
+**Rebase Buddy: Interactive rebase from here…** (command palette) lists the
+commits on your branch; pick the oldest one you want to rewrite and the
+editor opens directly — the IntelliJ workflow. This works per invocation
+and does not require Enable.
+
 ### Keyboard
 
 `↑↓` select · `⌥↑↓` move · `P R E S F D` set the action of the selected
@@ -45,9 +52,11 @@ commit (pick, reword, edit, squash, fixup, drop).
 
 | Setting | Default | Purpose |
 |---|---|---|
-| `rebaseBuddy.defaultOrder` | `oldest-first` | Initial display order of the commit list |
+| `rebaseBuddy.defaultOrder` | `newest-first` | Initial display order of the commit list |
 | `rebaseBuddy.detailsWidth` | `340` | Initial width of the details panel (px) |
 | `rebaseBuddy.confirmAbort` | `true` | Require a second click to confirm Abort |
+| `rebaseBuddy.showBaseCommit` | `true` | Show the base commit, greyed out and read-only |
+| `rebaseBuddy.showActionHints` | `true` | Show action descriptions in the action menu; off gives a compact menu |
 
 ## Building from source
 

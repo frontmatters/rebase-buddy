@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-07-15
+
+### Added
+
+- `Rebase Buddy: Interactive rebase from here…`: pick a commit from a
+  QuickPick (your branch up to the merge-base with origin's default branch)
+  and the rebase starts with the Rebase Buddy editor — no terminal needed.
+  Purely an extra entry point; the `git rebase -i` terminal flow is
+  unchanged. Refuses politely when the working tree is dirty, and opens the
+  existing todo when a rebase is already in progress.
+
+### Changed
+
+- All internal ids renamed from `rebaser.*` to `rebaseBuddy.*` (commands,
+  editor viewType, diff scheme). The stored previous sequence editor
+  migrates automatically on first activation; keybindings that referenced
+  the old command ids need a one-time update.
+
 ## [0.7.0] - 2026-07-14
 
 ### Added
